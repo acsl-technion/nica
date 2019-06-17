@@ -65,8 +65,23 @@ struct byte_array {
 template <unsigned Size>
 struct memcached_key : byte_array<Size, 128>
 {
-    memcached_key() {}
-    memcached_key(const ap_uint<128>& d) : byte_array<Size, 128>(d) {}
+    ap_uint<5> actual_size;
+    memcached_key() : actual_size(0) {}
+    memcached_key(const ap_uint<128>& d) : byte_array<Size, 128>(d), actual_size(0) {}
+
+    bool operator==(const memcached_key<Size>& rhs) const {
+        bool equal = true;
+
+        for (int i = 0; i < Size; ++i) {
+#pragma HLS unroll
+            if (this->data[i] != rhs.data[i] && i < actual_size) {
+                equal = false;
+                break;
+            }
+        }
+
+        return equal;
+    }
 };
 
 template <unsigned Size>
@@ -181,21 +196,23 @@ private:
     }
 
     index_t h_a(const memcached_key<KeySize>& tag) const {
-#pragma HLS pipeline enable_flush ii=4
+#pragma HLS pipeline enable_flush ii=3
 	    index_t seed = 5381;
 	    for (int i = 0; i < KeySize / 2; ++i) {
 #pragma HLS unroll
-		    seed = ((seed << 5) + seed) + tag.data[i];
+            if (i < tag.actual_size)
+		        seed = ((seed << 5) + seed) + tag.data[i];
 	    }
 
 	    return seed;
     }
 
     index_t h_b(index_t seed, const memcached_key<KeySize>& tag) const {
-#pragma HLS pipeline enable_flush ii=4
+#pragma HLS pipeline enable_flush ii=3
 	    for (int i = KeySize / 2; i < KeySize; ++i) {
 #pragma HLS unroll
-		    seed = ((seed << 5) + seed) + tag.data[i];
+            if (i < tag.actual_size)
+		        seed = ((seed << 5) + seed) + tag.data[i];
 	    }
 
 	    return seed;

@@ -142,6 +142,10 @@ localparam
   SBU2NWP_STREAM = 4'd2,
   CXP2SBU_STREAM = 4'd3,
   SBU2CXP_STREAM = 4'd4,
+  IK2MAP_DDR_AW = 4'd5,
+  SBU2MLX_DDR_AW = 4'd6,
+  IK2MAP_DDR_AR = 4'd7,
+  SBU2MLX_DDR_AR = 4'd8,
 
 // Stream match/sample events:
   STREAM0_PATTERN_MATCH = 8'hc0,

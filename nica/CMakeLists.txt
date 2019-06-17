@@ -13,7 +13,7 @@ foreach(pcap_file passthrough.pcap input.pcap
 endforeach(pcap_file)
 
 set(nica_sources hls/nica.cpp hls/udp.cpp hls/mlx.cpp hls/flow_table.cpp
-    hls/custom_rx_ring.cpp hls/ikernel.cpp)
+    hls/custom_rx_ring.cpp hls/ikernel.cpp hls/toe_wrapper.cpp)
 set(nica_testbench_sources hls/tests/main.cpp hls/tests/tb.cpp
     ../ikernels/hls/passthrough.cpp ../ikernels/hls/threshold.cpp ../ikernels/hls/pktgen.cpp
     )

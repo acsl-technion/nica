@@ -67,7 +67,7 @@ class pktgen : public hls_ik::ikernel, public hls_ik::virt_gateway_impl<pktgen> 
 public:
     pktgen();
 
-    virtual void step(hls_ik::ports& ports, hls_ik::tc_ikernel_data_counts& tc);
+    void step(hls_ik::ports& ports, hls_ik::tc_ikernel_data_counts& tc);
 
     int reg_write(int address, int value, hls_ik::ikernel_id_t ikernel_id);
     int reg_read(int address, int* value, hls_ik::ikernel_id_t ikernel_id);

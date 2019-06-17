@@ -96,7 +96,7 @@ namespace {
         empty_packet.write(GetParam() == 0);
         suffix.write(suffix_t(0xa1a2a3a4));
         write_sized_packet(in, GetParam());
-	for (unsigned i = 0; i < (1 + GetParam()) * 2; ++i)
+	for (unsigned i = 0; i < (2 + GetParam()) * 2; ++i)
 	    push.reorder(in, empty_packet, enable_stream, suffix, out);
         unsigned expected_size = (GetParam() + 4 + 3) & ~3; /* 4 byte aligned */
 	EXPECT_EQ(expected_size, get_packet_size(out, GetParam()));
@@ -111,7 +111,6 @@ namespace {
 
         empty_packet.write(GetParam() == 0);
         enable_stream.write(false);
-        suffix.write(suffix_t(0xa1a2a3a4));
         write_sized_packet(in, GetParam());
 	for (unsigned i = 0; i < 1 + GetParam() * 2; ++i)
 	    push.reorder(in, empty_packet, enable_stream, suffix, out);

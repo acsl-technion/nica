@@ -43,43 +43,44 @@ done_reg=$[$base + 0x18]
 ikernel_id_reg=$[$base + 0x20]
 
 device=/dev/mst/mt4117_pciconf0_fpga_i2c
+mlx_fpga="sudo mlx_fpga -a $HOME/fpga_2768.adb -d $device"
 
 if [[ "$cmd" == "w" ]]
 then
 	if [[ -n "$ikernel_id" ]] ; then
-		sudo mlx_fpga -d $device w $ikernel_id_reg $ikernel_id
+		$mlx_fpga w $ikernel_id_reg $ikernel_id
 	fi
-	sudo mlx_fpga -d $device w $data_i_reg $value
-	sudo mlx_fpga -d $device w $cmd_reg $[0xc0000000|$addr]
+	$mlx_fpga w $data_i_reg $value
+	$mlx_fpga w $cmd_reg $[0xc0000000|$addr]
 	# verify the command is done by reading 1 from the gateway_done register (0x102c):
 	res=0
 	while [[ $[$res] == 0 ]]
 	do
-		res=`sudo mlx_fpga -d $device r $done_reg`
+		res=`$mlx_fpga r $done_reg`
 	done
 	# finally resetting the gateway for the next command and verifying the reset is done:
-	sudo mlx_fpga -d $device w $cmd_reg 0x0
+	$mlx_fpga w $cmd_reg 0x0
 	res=1
 	while [[ $[$res] == 1 ]]
 	do
-		res=`sudo mlx_fpga -d $device r $done_reg`
+		res=`$mlx_fpga r $done_reg`
 	done
 else
 	if [[ -n "$ikernel_id" ]] ; then
-		sudo mlx_fpga -d $device w $ikernel_id_reg $ikernel_id
+		$mlx_fpga w $ikernel_id_reg $ikernel_id
 	fi
-	sudo mlx_fpga -d $device w $cmd_reg $[0x80000000|$addr]
+	$mlx_fpga w $cmd_reg $[0x80000000|$addr]
 	res=0
 	while [[ $[$res] == 0 ]]
 	do
-		res=`sudo mlx_fpga -d $device r $done_reg`
+		res=`$mlx_fpga r $done_reg`
         done
-	sudo mlx_fpga -d $device r $data_o_reg
+	$mlx_fpga r $data_o_reg
 	# finally resetting the gateway for the next command and verifying the reset is done:
-        sudo mlx_fpga -d $device w $cmd_reg 0x0
+        $mlx_fpga w $cmd_reg 0x0
 	res=1
         while [[ $[$res] == 1 ]]
 	do
-		res=`sudo mlx_fpga -d $device r $done_reg`
+		res=`$mlx_fpga r $done_reg`
         done
 fi

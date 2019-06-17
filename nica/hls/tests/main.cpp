@@ -159,7 +159,7 @@ public:
         nica(nwp2sbu, sbu2nwp, cxp2sbu, sbu2cxp,
              &c, &s, events,
              BOOST_PP_ENUM_PARAMS(NUM_IKERNELS, ports),
-             h2n_tc_out, h2n_tc_in, n2h_tc_out, n2h_tc_in);
+             h2n_tc_out, h2n_tc_in, n2h_tc_out, n2h_tc_in, toe);
         link_fifo(h2n_tc_out, h2n_tc_in);
         link_fifo(n2h_tc_out, n2h_tc_in);
     }
@@ -304,6 +304,7 @@ TEST_F(testbench, h2n_nica_passthrough)
     EXPECT_EQ(diff.h2n.ik0.packets, 0) << "packets";
 }
 
+/* TODO: not supported currently in the TCP version 
 TEST_F(testbench, drop)
 {
     const char *input_filename = "input.pcap";
@@ -340,6 +341,7 @@ TEST_F(testbench, drop)
     EXPECT_EQ(diff.n2h.udp.hds.passthrough_disabled, 0) << "disabled";
     EXPECT_EQ(diff.n2h.ik0.packets, 0) << "packets";
 }
+*/
 
 TEST_F(testbench, custom_rx_ring)
 {

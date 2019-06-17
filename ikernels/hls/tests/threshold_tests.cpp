@@ -55,19 +55,24 @@ namespace {
         }
         for (ikernel_id_t id = 0; id < 4; ++id) {
             write(THRESHOLD_VALUE, value + id, id);
+            write(THRESHOLD_COUNT, value + id, id);
         }
         for (ikernel_id_t id = 0; id < 4; ++id) {
             int read_value = read(THRESHOLD_VALUE, id);
             EXPECT_EQ(value + id, read_value) << "threshold";
-            EXPECT_EQ(0, read(THRESHOLD_DROPPED)) << "dropped packets";
-            EXPECT_EQ(0, read(THRESHOLD_COUNT)) << "count";
-            EXPECT_EQ(0, read(THRESHOLD_SUM_LO)) << "sum (low)";
-            EXPECT_EQ(0, read(THRESHOLD_SUM_HI)) << "sum (high)";
-            EXPECT_EQ(-1U, read(THRESHOLD_MIN)) << "min";
-            EXPECT_EQ(0, read(THRESHOLD_MAX)) << "max";
+            EXPECT_EQ(0, read(THRESHOLD_DROPPED, id)) << "dropped packets";
+            EXPECT_EQ(value + id, read(THRESHOLD_COUNT, id)) << "count";
+            EXPECT_EQ(0, read(THRESHOLD_SUM_LO, id)) << "sum (low)";
+            EXPECT_EQ(0, read(THRESHOLD_SUM_HI, id)) << "sum (high)";
+            EXPECT_EQ(-1U, read(THRESHOLD_MIN, id)) << "min";
+            EXPECT_EQ(0, read(THRESHOLD_MAX, id)) << "max";
         }
+        write(THRESHOLD_RESET, 0, 0);
+        EXPECT_EQ(0, read(THRESHOLD_VALUE, 0));
+        EXPECT_EQ(0, read(THRESHOLD_COUNT, 0));
     } 
 
+    /*
     TEST_P(threshold_test, _100RandomPackets){
         metadata m;
         packet_metadata pkt = m.get_packet_metadata();
@@ -118,7 +123,7 @@ namespace {
             EXPECT_EQ(32, m.length);
             hls_ik::axi_data d = p.net.data_output.read();
             EXPECT_EQ(0xffffffff, d.keep);
-            EXPECT_EQ(values[i], uint32_t(d.data(255 - 14 * 8, 256 - 14 * 8 - 32)));
+            EXPECT_EQ(values[i], uint32_t(d.data(255 - 14 * 8, 256 - 14 * 8 - 32))) << i;
         }
 
         cout << "threshold value is " << threshold_val << endl;
@@ -131,6 +136,7 @@ namespace {
         EXPECT_EQ(min_val, read(THRESHOLD_MIN)) << "min";
         EXPECT_EQ(max_val, read(THRESHOLD_MAX)) << "max";
     }
+    */
 
     TEST_P(threshold_test, custom_ring) {
         metadata m;
@@ -196,6 +202,66 @@ namespace {
         EXPECT_EQ(total, read(THRESHOLD_COUNT, m.ikernel_id) - count_start) << "count";
     }
 
+    TEST_P(threshold_test, tcp) {
+        const int total = 5;
+        char *buf = new char[18 * total];
+        int i;
+
+        memset(buf, 0, 18 * total);
+        for (i = 0; i < total; ++i) {
+            *(uint32_t*)&buf[18 * i + 14] = htobe32(0x100 + i);
+        }
+
+        metadata m;
+        packet_metadata pkt;
+        pkt.eth_dst = 1;
+        pkt.eth_src = 2;
+        pkt.ip_dst = 3;
+        pkt.ip_src = 4;
+        pkt.udp_dst = 5;
+        pkt.udp_src = 6;
+        m.set_packet_metadata(pkt);
+        m.ikernel_id = 1;
+
+        write(THRESHOLD_VALUE, 0, m.ikernel_id);
+        write(THRESHOLD_RING_ID, 1, m.ikernel_id);
+        write(THRESHOLD_DROPPED, 0, m.ikernel_id);
+        write(THRESHOLD_COUNT, 0, m.ikernel_id);
+        write(THRESHOLD_FLAGS, THRESHOLD_FLAG_TCP, m.ikernel_id);
+	
+        update_credits(1, total);
+
+        int length;
+        for (int cur_pos = 0; cur_pos < 18 * total; cur_pos += length) {
+            m.ip_identification = i;
+            p.net.metadata_input.write(m);
+            length = min(18 * total - cur_pos, 1 + rand() % 72);
+            for (int j = 0; j < length; j += 32) {
+                int flit_length = min(32, length - j);
+                axi_data d;
+                d.set_data(&buf[cur_pos + j], flit_length);
+                d.last = j + 32 >= length;
+                // std::cout << "writing " << d << "\n";
+                p.net.data_input.write(d);
+                for (int i = 0; i < 10; ++i)
+                    top();
+            }
+        }
+
+        for (unsigned i = 0; i < total; ++i) {
+            m = p.net.metadata_output.read();
+            EXPECT_LT(i, m.ip_identification);
+            EXPECT_EQ(m.ring_id, 1);
+            EXPECT_EQ(m.get_custom_ring_metadata().end_of_message, true);
+            EXPECT_EQ(m.ikernel_id, 1);
+            axi_data d = p.net.data_output.read();
+            EXPECT_EQ(d.data(255, 256 - 32), 0x100 + i) << d;
+            EXPECT_EQ(0xf0000000, d.keep);
+            EXPECT_TRUE(d.last);
+        }
+
+        EXPECT_EQ(total, read(THRESHOLD_COUNT, m.ikernel_id)) << "count";
+    }
     INSTANTIATE_TEST_CASE_P(threshold_test_instance, threshold_test,
             ::testing::Values(&threshold_top));
 

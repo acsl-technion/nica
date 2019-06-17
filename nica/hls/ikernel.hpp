@@ -391,12 +391,12 @@ struct ikernel_ring_context
 class ikernel {
 public:
     ikernel() : dummy_update("dummy_update") {}
-    virtual ~ikernel() {}
+    ~ikernel() {}
 
-    virtual void step(ports& ports, tc_ikernel_data_counts& tc) = 0;
+    void step(ports& ports, tc_ikernel_data_counts& tc);
 
     /* For simulation: accessor functions to AXI4-Lite registers. */
-    virtual int reg_write(int address, int value, ikernel_id_t ikernel_id)
+    int reg_write(int address, int value, ikernel_id_t ikernel_id)
     {
         switch (address) {
         case 0:
@@ -408,7 +408,7 @@ public:
         return GW_DONE;
     }
 
-    virtual int reg_read(int address, int* value, ikernel_id_t ikernel_id)
+    int reg_read(int address, int* value, ikernel_id_t ikernel_id)
     {
         switch (address) {
         case 0:
@@ -425,7 +425,7 @@ public:
     /** Update all gateway related registers in here.
      *
      * Otherwise HLS is not happy (dataflow won't work). */
-    virtual void gateway_update() {}
+    void gateway_update() {}
 
     /* Called from the top function to queue credit updates */
     void host_credits_update(credit_update_registers& regs);
@@ -518,10 +518,10 @@ static inline void link_ports_sim(hls_ik::ports& in, hls_ik::ports& out)
 
 
 #define IKERNEL_PIPELINE_PORTS_PRAGMAS(__pipeline) \
-    DO_PRAGMA(HLS interface axis port=__pipeline.metadata_input) \
-    DO_PRAGMA(HLS interface axis port=__pipeline.metadata_output) \
-    DO_PRAGMA(HLS interface axis port=__pipeline.data_input) \
-    DO_PRAGMA(HLS interface axis port=__pipeline.data_output)
+    DO_PRAGMA(HLS interface axis port=&__pipeline.metadata_input) \
+    DO_PRAGMA(HLS interface axis port=&__pipeline.metadata_output) \
+    DO_PRAGMA(HLS interface axis port=&__pipeline.data_input) \
+    DO_PRAGMA(HLS interface axis port=&__pipeline.data_output)
 
 #define IKERNEL_TC_PIPELINE_PRAGMAS(__tc_pipeline) \
     TC_COUNTS_PRAGMAS(__tc_pipeline.tc_data_counts) \
@@ -539,11 +539,11 @@ static inline void link_ports_sim(hls_ik::ports& in, hls_ik::ports& out)
     IKERNEL_PIPELINE_PORTS_PRAGMAS(__ports.net) \
     IKERNEL_PIPELINE_PORTS_PRAGMAS(__ports.host) \
     IKERNEL_CREDIT_REGS_PRAGMAS(__ports.host_credit_regs, 0x1050) \
-    DO_PRAGMA_SYN(HLS interface axis port=__ports.mem.ar) \
-    DO_PRAGMA_SYN(HLS interface axis port=__ports.mem.r) \
-    DO_PRAGMA_SYN(HLS interface axis port=__ports.mem.aw) \
-    DO_PRAGMA_SYN(HLS interface axis port=__ports.mem.w) \
-    DO_PRAGMA_SYN(HLS interface axis port=__ports.mem.b) \
+    DO_PRAGMA_SYN(HLS interface axis port=&__ports.mem.ar) \
+    DO_PRAGMA_SYN(HLS interface axis port=&__ports.mem.r) \
+    DO_PRAGMA_SYN(HLS interface axis port=&__ports.mem.aw) \
+    DO_PRAGMA_SYN(HLS interface axis port=&__ports.mem.w) \
+    DO_PRAGMA_SYN(HLS interface axis port=&__ports.mem.b) \
     DO_PRAGMA(HLS array_partition variable=__ports.events complete) \
     DO_PRAGMA(HLS interface ap_none port=__ports.events)
 
@@ -568,7 +568,7 @@ DECLARE_TOP_FUNCTION(__name) \
     DO_PRAGMA_SIM(HLS stream variable=ports_buf.net.metadata_input depth=256); \
     DO_PRAGMA_SIM(HLS stream variable=ports_buf.net.data_input depth=256); \
     using namespace hls_ik; \
-    static const ikernel_id __constant_uuid = { __uuid }; \
+    constexpr ikernel_id __constant_uuid = { __uuid }; \
     INSTANCE(__class).host_credits_update(ik.host_credit_regs); \
     INSTANCE(__class).step(IF_SIM(ports_buf, ik), tc); \
     INSTANCE(__class).gateway(&INSTANCE(__class), gateway); \

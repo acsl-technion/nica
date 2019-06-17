@@ -4,7 +4,7 @@
 modprobe -v mlx_accel_tools
 
 # Re-load fpga
-mlx_fpga -d /dev/mst/mt4117_pciconf0_fpga load
+mlx_fpga -d /dev/mst/mt4117_pciconf0_fpga load --user
 
 # Unload drivers
 modprobe -vr mlx_accel_tools

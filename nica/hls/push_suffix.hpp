@@ -53,13 +53,11 @@ public:
             empty = empty_packet.read();
 	    enable = enable_stream.read();
 
-            if (!enable) {
+            if (!enable)
                 state = empty ? IDLE : DATA;
-                break;
-            } else {
+            else
                 state = READ_SUFFIX;
-                /* Fall through */
-            }
+            break;
 
         case READ_SUFFIX:
             if (suffix_in.empty())
@@ -120,7 +118,10 @@ public:
 		flit.last = false;
 		state = LAST;
 	    }
-	    flit.data &= ~mask;
+            /* Use 256-bit to hold not_mask because the ~ operator in HLS adds
+             * an extra bit for some reason, causing a warning. */
+            ap_uint<256> not_mask = ~mask;
+	    flit.data &= not_mask;
 	    flit.data |= suffix_shifted;
 	    flit.keep |= keep_mask;
             out.write(flit);

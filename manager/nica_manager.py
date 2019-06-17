@@ -25,6 +25,7 @@ from idpool import IDPool
 from util import mac_to_str, str_to_mac, inet_ntoa
 
 from nica import NicaHardware, FlowTable, inet_aton
+from socket_info import get_sock_family, get_sock_type, get_tcp_state, TCPStates
 
 FPGA_MAC = '00:00:00:00:00:01'
 FPGA_IP = '10.0.0.1'
@@ -140,7 +141,7 @@ class Netdev(ABC):
     def bind_local(self, flow):
         '''Change an INADDR_ANY flow to a local IP flow.'''
         if flow[0] == '0.0.0.0':
-            return (self.ip_addr, flow[1])
+            return (self.ip_addr,) + flow[1:]
         return flow
 
     def get_ikernel(self, ikernel_id):
@@ -292,19 +293,27 @@ class NetdevHardware(Netdev):
             logging.warning('flow already taken')
             raise exception(errno.EADDRINUSE)
 
-        h2n_flow_id = self.nica.h2n_flow_table.set_flow(
-            flow[0], flow[1], 0, socket.INADDR_ANY,
-            action=FlowTable.FT_IKERNEL, ikernel=ikernel.ikernel_index, ikernel_id=ikernel.ikernel_id)
-        if h2n_flow_id == 0xffffffff or h2n_flow_id == 0:
-            logging.error("h2n FT_ADD_FLOW returned {}".format(h2n_flow_id))
-            raise exception(errno.EINVAL)
-        n2h_flow_id = self.nica.n2h_flow_table.set_flow(
-            0, socket.INADDR_ANY, flow[0], flow[1],
-            action=FlowTable.FT_IKERNEL, ikernel=ikernel.ikernel_index, ikernel_id=ikernel.ikernel_id)
-        if n2h_flow_id == 0xffffffff or n2h_flow_id == 0:
-            # TODO clean h2n flow
-            logging.error("n2h FT_ADD_FLOW returned {}".format(n2h_flow_id))
-            raise exception(errno.EINVAL)
+        if flow[3] == socket.SOCK_DGRAM:
+            h2n_flow_id = self.nica.h2n_flow_table.set_flow(
+                flow[0], flow[1], 0, socket.INADDR_ANY,
+                action=FlowTable.FT_IKERNEL, ikernel=ikernel.ikernel_index, ikernel_id=ikernel.ikernel_id)
+            if h2n_flow_id == 0xffffffff or h2n_flow_id == 0:
+                logging.error("h2n FT_ADD_FLOW returned {}".format(h2n_flow_id))
+                raise exception(errno.EINVAL)
+            n2h_flow_id = self.nica.n2h_flow_table.set_flow(
+                0, socket.INADDR_ANY, flow[0], flow[1],
+                action=FlowTable.FT_IKERNEL, ikernel=ikernel.ikernel_index, ikernel_id=ikernel.ikernel_id)
+            if n2h_flow_id == 0xffffffff or n2h_flow_id == 0:
+                # TODO clean h2n flow
+                logging.error("n2h FT_ADD_FLOW returned {}".format(n2h_flow_id))
+                raise exception(errno.EINVAL)
+        elif flow[3] == socket.SOCK_STREAM:
+            ret = self.nica.toe.listen(flow[1])
+            if ret != 1:
+                logging.info("LISTEN_PORT failed")
+                #raise exception(errno.EINVAL)
+            h2n_flow_id = 0
+            n2h_flow_id = 0
 
         self.flows[flow] = (ikernel, h2n_flow_id, n2h_flow_id)
         return h2n_flow_id, n2h_flow_id
@@ -316,15 +325,19 @@ class NetdevHardware(Netdev):
             logging.warning('flow missing')
             raise exception(errno.ENOENT)
 
-        success = True
-        ret = self.nica.h2n_flow_table.del_flow(flow[0], flow[1], socket.INADDR_ANY, 0)
-        if ret == 0xffffffff:
-            logging.error("h2n FT_DELETE_FLOW returned -1")
-            success = False
-        ret = self.nica.n2h_flow_table.del_flow(socket.INADDR_ANY, 0, flow[0], flow[1])
-        if ret == 0xffffffff:
-            logging.error("n2h FT_DELETE_FLOW returned -1")
-            success = False
+        if flow[3] == socket.SOCK_DGRAM:
+            success = True
+            ret = self.nica.h2n_flow_table.del_flow(flow[0], flow[1], socket.INADDR_ANY, 0)
+            if ret == 0xffffffff:
+                logging.error("h2n FT_DELETE_FLOW returned -1")
+                success = False
+            ret = self.nica.n2h_flow_table.del_flow(socket.INADDR_ANY, 0, flow[0], flow[1])
+            if ret == 0xffffffff:
+                logging.error("n2h FT_DELETE_FLOW returned -1")
+                success = False
+        elif flow[3] == socket.SOCK_STREAM:
+            # TODO implement close on listening port
+            success = True
 
         del self.flows[flow]
 
@@ -484,12 +497,18 @@ class NetdevParavirt(Netdev, RPC):
 
     def attach(self, flow, ikernel):
         ip_addr = inet_aton(flow[0])
+        if flow[3] == socket.SOCK_STREAM:
+            logging.warning('TCP virtualization not yet implemented')
+            raise exception(errno.EINVAL)
         return self.invoke(HypervisorOpcodes.ATTACH,
                            Struct('IHI'), (ip_addr, flow[1], ikernel.ikernel_id),
                            Struct('II'))
 
     def detach(self, flow, ikernel):
         ip_addr = inet_aton(flow[0])
+        if flow[3] == socket.SOCK_STREAM:
+            logging.warning('TCP virtualization not yet implemented')
+            raise exception(errno.EINVAL)
         self.invoke(HypervisorOpcodes.DETACH,
                     Struct('IHI'), (ip_addr, flow[1], ikernel.ikernel_id))
 
@@ -778,9 +797,21 @@ class NICAManagerProtocol(NICAManagerProtocolBase):
     @staticmethod
     def flow_from_fd(sock_fd):
         '''Convert a given socket file descriptor to a sockname (IP address, port) tuple.'''
-        sock = socket.fromfd(sock_fd, socket.AF_INET, socket.SOCK_DGRAM)
-        os.close(sock_fd)
-        flow = sock.getsockname()
+        family = get_sock_family(sock_fd)
+        socket_type = get_sock_type(sock_fd)
+        if (family, socket_type) == (socket.AF_INET, socket.SOCK_DGRAM):
+            sock = socket.socket(family, socket_type, fileno=sock_fd)
+        elif (family, socket_type) == (socket.AF_INET, socket.SOCK_STREAM):
+            sock = socket.socket(family, socket_type, fileno=sock_fd)
+            state = get_tcp_state(sock)
+            if state != TCPStates.TCP_LISTEN:
+                logging.warning('Expecting socket in listening state')
+                raise exception(errno.EINVAL)
+        else:
+            logging.warning('Invalid socket family, type: %s', (family, socket_type))
+            raise exception(errno.EINVAL)
+
+        flow = sock.getsockname() + (family, socket_type)
         sock.close()
         return flow
 
@@ -930,7 +961,7 @@ class NICAManagerHypervisorProtocol(NICAManagerProtocolBase):
     @staticmethod
     def flow_from_binary(flow_ip, flow_port):
         '''Convert IP address to string and return a flow tuple.'''
-        return (inet_ntoa(flow_ip), flow_port)
+        return (inet_ntoa(flow_ip), flow_port, socket.AF_INET, socket.SOCK_DGRAM)
 
     @rpc(HypervisorOpcodes.ATTACH, Struct('IHI'), Struct('II'))
     def attach(self, flow_ip, flow_port, ikernel_id):

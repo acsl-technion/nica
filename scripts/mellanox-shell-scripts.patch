@@ -1,7 +1,5 @@
-diff --git a/project/create_project.tcl b/project/create_project.tcl
-index 05cb2e665bf9..f0d2341bfb6b 100755
---- a/project/create_project.tcl
-+++ b/project/create_project.tcl
+--- user/project/create_project.tcl	2017-08-08 11:59:21.000000000 +0300
++++ user-mod/project/create_project.tcl	2018-04-28 11:59:27.177544204 +0300
 @@ -1,4 +1,11 @@
  ###############################################################
 +###   Overriding "known" issues 
@@ -13,21 +11,31 @@ index 05cb2e665bf9..f0d2341bfb6b 100755
 +###############################################################
  ###   Tcl Variables
  ###############################################################
- if { $argc == 1 } {
-@@ -20,6 +27,8 @@ source $tclDir/impl_utils.tcl
- source $tclDir/hd_floorplan_utils.tcl
- source $tclDir/pr_utils.tcl
+ if { $argc == 2 } {
+@@ -18,7 +25,7 @@
+ }
  
+ set tclDir  "../scripts/xilinx"
+-set upgrade_ip 0
++set upgrade_ip y
+ 
+ #### Xilinx TCL sources
+ source $tclDir/design_utils.tcl
+@@ -29,6 +36,9 @@
+ source $tclDir/pr_utils.tcl
+ source $tclDir/mlx_utils.tcl
+ 
++source $tclDir/mlx_utils.tcl
 +source $tclDir/env.tcl
 +
  ###############################################################
  ### Define Part, Package, Speedgrade 
  ###############################################################
-@@ -50,7 +59,23 @@ set hlsDir 		"../sources/ip_repo"
+@@ -62,7 +72,22 @@
  ###############################################################
  ### Define SBU files
  ###############################################################
--set verilogList       [glob -nocomplain $verilogDir/*.v]
+-set vlogList       	  	[glob -nocomplain $vlogDir/*.v]
 +set dirs [ list {*}$ikernels . ]
 +if { $num_ikernels == 1 } {
 +    lappend dirs nica
@@ -38,35 +46,71 @@ index 05cb2e665bf9..f0d2341bfb6b 100755
 +puts "dirs = $dirs"
 +set verilogList [list]
 +foreach d $dirs {
-+    lappend verilogList [glob -nocomplain $verilogDir/$d/*.v]
++    lappend verilogList [glob -nocomplain $vlogDir/$d/*.v]
 +    puts "adding files in dir $d"
-+    puts [glob -nocomplain $verilogDir/$d/*.v]
++    puts [glob -nocomplain $vlogDir/$d/*.v]
 +}
-+set verilogList [concat $verilogList]
-+puts "verilogList: $verilogList"
-+
- set vhdlList       	  [glob -nocomplain $vhdlDir/*.vhd]
- set xciList           [glob -nocomplain $xciDir/*/*.xci]
- set bdList            [glob -nocomplain $bdDir/*/*.bd]
-@@ -82,6 +107,12 @@ set_attribute module $sbu ipRepo              $ipRepoList
- set_attribute module $sbu xdc                 $xdcList
- set_attribute module $sbu synthXDC            $xdcSynthList
- set_attribute module $sbu synth               1
++set vlogList [concat $verilogList]
++puts "vlogList: $vlogList"
+ set sysvlogList       	[glob -nocomplain $sysvlogDir/*.v]
+ set vhdlList       	  	[list [glob -nocomplain $vhdlDir/*.vhd] work]
+ set xciList           	[glob -nocomplain $xciDir/*/*.xci]
+@@ -96,6 +121,17 @@
+ set_attribute module $sbu xdc                 	$xdcList
+ set_attribute module $sbu synthXDC            	$xdcSynthList
+ set_attribute module $sbu synth               	1
++set_attribute module $sbu cores               [list $xciDir/SmartCamCtl.dcp]
++set_attribute module $sbu sysvlog             [glob -nocomplain ../sources/sysvlog/*.sv]
 +puts "Building for ikernels: $ikernel0 $ikernel1"
 +set_attribute module $sbu vlog_defines [list \
 +    "BUILD_NUMBER=$build_number" \
 +    "SIGMON_ENABLE=$sigmon_enable" \
 +    "IKERNEL0=$ikernel0" \
-+    "IKERNEL1=$ikernel1"]
++    "IKERNEL1=$ikernel1" \
++    "FIRST_SHA_UNITS=$first_sha_units" \
++    "SECOND_SHA_UNITS=$second_sha_units" \
++]
  
- set sbu_instance1 "sbu"
- 
-diff --git a/scripts/xilinx/env.tcl b/scripts/xilinx/env.tcl
-new file mode 100644
-index 000000000000..d21cdeddf590
---- /dev/null
-+++ b/scripts/xilinx/env.tcl
-@@ -0,0 +1,32 @@
+ ########################################################################
+ ### Configuration/Implementation Definition - Replicate for each Run 
+--- user/scripts/xilinx/implement.tcl	2017-08-08 11:59:21.000000000 +0300
++++ user-mod/scripts/xilinx/implement.tcl	2018-04-28 11:24:34.980002207 +0300
+@@ -394,7 +394,8 @@
+       if {$verbose > 1} {
+          set start_time [clock seconds]
+          puts "\tRunning report_utilization \[[clock format $start_time -format {%a %b %d %H:%M:%S %Y}]\]"
+-         command "report_utilization -file $reportDir/${top}_utilization_link_design.rpt" "$resultDir/temp.log"
++         command "report_utilization -hierarchical -file $reportDir/${top}_utilization_link_design.rpt" "$resultDir/temp.log"
++         command "report_utilization -hierarchical -format xml -file $reportDir/${top}_utilization_link_design.xml" "$resultDir/temp.log"
+          set end_time [clock seconds]
+          log_time report_utilization $start_time $end_time
+       } 
+--- user/scripts/xilinx/synthesize.tcl	2017-08-08 11:59:21.000000000 +0300
++++ user-mod/scripts/xilinx/synthesize.tcl	2018-04-28 11:18:44.922617910 +0300
+@@ -150,7 +150,10 @@
+    
+    #### Set Verilog Defines
+    if {$vlogDefines != ""} {
++      puts "\tSetting verilog_define to $vlogDefines."
+       command "set_property verilog_define \{$vlogDefines\} \[current_fileset\]"
++   } else {
++      puts "\tNo verilog_define set."
+    }
+    
+    #### Set Include Directories
+@@ -181,7 +184,8 @@
+    
+    if {$verbose >= 1} {
+       set start_time [clock seconds]
+-      command "report_utilization -file $resultDir/${moduleName}_utilization_synth.rpt" "$resultDir/temp.log"
++      command "report_utilization -hierarchical -file $resultDir/${moduleName}_utilization_synth.rpt" "$resultDir/temp.log"
++      command "report_utilization -hierarchical -format xml -file $resultDir/${moduleName}_utilization_synth.xml" "$resultDir/temp.log"
+       set end_time [clock seconds]
+       log_time report_utilization $start_time $end_time 0 "Report Synthesis Utilization of $module"
+    }
+--- user/scripts/xilinx/env.tcl	1970-01-01 02:00:00.000000000 +0200
++++ user-mod/scripts/xilinx/env.tcl	2018-04-28 11:18:44.922617910 +0300
+@@ -0,0 +1,34 @@
 +package require Tcl
 +package require struct::set
 +
@@ -88,6 +132,8 @@ index 000000000000..d21cdeddf590
 +set ikernel1 [ get_env IKERNEL1 "threshold" ]
 +set num_ikernels [ get_env NUM_IKERNELS 1 ]
 +set cms_heap_depth [ get_env CMS_HEAP_DEPTH 256 ]
++set first_sha_units [ get_env FIRST_SHA_UNITS 3 ]
++set second_sha_units [ get_env SECOND_SHA_UNITS 2 ]
 +
 +set ikernel_defs [list]
 +for {set i 0} {$i < $num_ikernels} {incr i} {
@@ -99,25 +145,9 @@ index 000000000000..d21cdeddf590
 +
 +puts "Building for ikernels: $ikernel0 $ikernel1"
 +
-diff --git a/scripts/xilinx/implement.tcl b/scripts/xilinx/implement.tcl
-index 1bb308227984..a07f625a0554 100755
---- a/scripts/xilinx/implement.tcl
-+++ b/scripts/xilinx/implement.tcl
-@@ -421,7 +421,8 @@ proc implement {impl} {
-       ##############################################
-       if {$verbose > 1} {
-          set start_time [clock seconds]
--         command "report_utilization -file $reportDir/${top}_utilization_link_design.rpt" "$resultDir/temp.log"
-+         command "report_utilization -hierarchical -file $reportDir/${top}_utilization_link_design.rpt" "$resultDir/temp.log"
-+         command "report_utilization -hierarchical -format xml -file $reportDir/${top}_utilization_link_design.xml" "$resultDir/temp.log"
-          set end_time [clock seconds]
-          log_time report_utilization $start_time $end_time
-       } 
-diff --git a/scripts/xilinx/step.tcl b/scripts/xilinx/step.tcl
-index d5f8e0c54f9a..b39a647b0db5 100755
---- a/scripts/xilinx/step.tcl
-+++ b/scripts/xilinx/step.tcl
-@@ -111,7 +111,8 @@ proc impl_step {phase instance {options none} {directive none} {pre none} {setti
+--- user/scripts/xilinx/step.tcl	2017-08-08 11:59:21.000000000 +0300
++++ user-mod/scripts/xilinx/step.tcl	2018-04-28 11:18:44.922617910 +0300
+@@ -111,7 +111,8 @@
     #Write out additional reports controled by verbose level
     if {$verbose > 1 || [string match $phase "route_design"]} {
        set start_time [clock seconds]
@@ -126,29 +156,4 @@ index d5f8e0c54f9a..b39a647b0db5 100755
 +      command "report_utilization -hierarchical -format xml -file $reportDir/${instance}_utilization_${phase}.xml" "$resultDir/temp.log"
        set end_time [clock seconds]
        log_time report_utilization $start_time $end_time
-    }
-diff --git a/scripts/xilinx/synthesize.tcl b/scripts/xilinx/synthesize.tcl
-index caef6ef03864..998ddc216cb9 100755
---- a/scripts/xilinx/synthesize.tcl
-+++ b/scripts/xilinx/synthesize.tcl
-@@ -142,7 +142,10 @@ proc synthesize { module } {
-    
-    #### Set Verilog Defines
-    if {$vlogDefines != ""} {
-+      puts "\tSetting verilog_define to $vlogDefines."
-       command "set_property verilog_define \{$vlogDefines\} \[current_fileset\]"
-+   } else {
-+      puts "\tNo verilog_define set."
-    }
-    
-    #### Set Include Directories
-@@ -173,7 +176,8 @@ proc synthesize { module } {
-    
-    if {$verbose >= 1} {
-       set start_time [clock seconds]
--      command "report_utilization -file $resultDir/${moduleName}_utilization_synth.rpt" "$resultDir/temp.log"
-+      command "report_utilization -hierarchical -file $resultDir/${moduleName}_utilization_synth.rpt" "$resultDir/temp.log"
-+      command "report_utilization -hierarchical -format xml -file $resultDir/${moduleName}_utilization_synth.xml" "$resultDir/temp.log"
-       set end_time [clock seconds]
-       log_time report_utilization $start_time $end_time 0 "Report Synthesis Utilization of $module"
     }

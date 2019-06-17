@@ -10,7 +10,10 @@ echo Setting up custom ring related settings for \"$dev\"
 ip=10.0.0.1
 fpga_mac=00:00:00:00:00:01
 
+# image 640 / MLNX OFED 3.3 requires enabling PFC on priority 0
 mlnx_qos -i $dev --pfc=1,0,0,0,0,0,0,0
+# image 2768 / MLNX OFED 4.0 requires enabling global pauses
+ethtool -A $dev rx on tx on
 
 # Find local ConnectX MAC
 local_mac=$(ip link show $dev | sed -n s'# *link/ether \(.*\) brd.*#\1#p')

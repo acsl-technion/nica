@@ -25,12 +25,21 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-def ikernels=['passthrough', 'threshold', 'cms', 'pktgen', 'echo', 'memcached']
+def ikernels=['passthrough', 'threshold', 'cms', 'pktgen', 'echo', 'memcached', 'coap']
+
+// shorter builds in coap - we are in a hurry
+if (env.BRANCH_NAME in ['coap', 'coap-timing-constraint']) {
+    // threshold for sanity
+    ikernels=['coap', 'threshold']
+}
+
+// For which ikernels to disable RTL/C co-sim
+def ikernels_disable_cosim = ikernels
 
 properties ([parameters([
     choice(name: 'VIVADO_VERSION',
            description: 'The version of Vivado HLS to use for the build',
-           choices: ['2016.2', '2016.4', '2017.2'].join('\n')),
+           choices: ['2016.2', '2018.2', '2018.1', '2017.2', '2016.4'].join('\n')),
     string(name: 'MEMCACHED_CACHE_SIZE', defaultValue: '4096', description: 'Memcached cache size in entries'),
     string(name: 'MEMCACHED_KEY_SIZE', defaultValue: '16', description: 'Memcached key size in bytes'),
     string(name: 'MEMCACHED_VALUE_SIZE', defaultValue: '16', description: 'Memcached value size in bytes'),
@@ -88,6 +97,7 @@ def vivadoEnv() {
 
 node {
     def GTEST_ROOT=pwd() + '/googletest/googletest'
+    def TOE_INCLUDE=pwd() + '/fpga-network-stack/hls'
     def CMAKE=findCmake()
 
     stage('Preparation') {
@@ -100,11 +110,13 @@ node {
         }
         dir ('googletest') {
             // Google test for the HLS ikernel tests and NICA tests
-            git 'https://github.com/google/googletest'
+            git url: 'https://github.com/google/googletest', branch: 'v1.8.x'
             // Build googletest (without googlemock)
-            sh """cd googletest
-            $CMAKE -DBUILD_GMOCK=OFF -DBUILD_GTEST=ON .
+            sh """$CMAKE -DBUILD_GMOCK=OFF . ;
             make -j"""
+        }
+        dir('fpga-network-stack') {
+            git 'https://github.com/haggaie/fpga-network-stack'
         }
         dir('nica/build') {
             // Build the HLS repository (host part only)
@@ -119,6 +131,7 @@ node {
                 -DMEMCACHED_KEY_SIZE=${params.MEMCACHED_KEY_SIZE} \
                 -DMEMCACHED_VALUE_SIZE=${params.MEMCACHED_VALUE_SIZE} \
                 -DNUM_TC=${params.NUM_TC} \
+                -DTOE_INCLUDE=${TOE_INCLUDE} \
                 ..
             make -j
             """
@@ -146,7 +159,7 @@ node {
     def branches = [
         nica: {
             stage('NICA NUM_KERNELS=1') {
-                hls('build/nica', 'nica', true)
+                hls('build/nica', 'nica', false)
             }
             //stage('NICA NUM_KERNELS=2') {
             //    hls('build-2/nica', 'nica')
@@ -155,7 +168,8 @@ node {
         ikernels: {
             for (ikernel in ikernels) {
                 stage(ikernel) {
-                    hls('build/ikernels', ikernel, true)
+                    hls('build/ikernels', ikernel,
+                        !(ikernel in ikernels_disable_cosim))
                 }
             }
         }
@@ -177,24 +191,23 @@ def getBuildIkernel(branchName) {
         'memcached-cr': 'memcached',
         'memcached-ddr': 'memcached',
         'async-memory': 'memcached',
-        'echo': 'echo'
+        'echo': 'echo',
+        'coap': 'coap',
+        'coap-timing-constraint': 'coap',
     ].withDefault { key -> 'threshold' }
 
     return buildIkernel[branchName]
 }
 
-// Choose the netperf-verilog branch to based on the nica branch name
-@NonCPS
-def getSimulationBranch(branchName) {
-    def simulationBranch = [
-        'memcached-cr': 'memcached-ddr',
-        'memcached-ddr': 'memcached-ddr'].withDefault { key -> 'master' }
+def simulationBranch = [
+    'master': 'master',
+    'memcached-cr': 'memcached-ddr',
+    'memcached-ddr': 'memcached-ddr',
+    'coap-timing-constraint': 'coap-timing-constraint',
+]
 
-    return simulationBranch[branchName]
-}
-
-if (env.BRANCH_NAME == 'master' && currentBuild.result == 'SUCCESS') {
-    build job: "netperf-verilog/${getSimulationBranch(env.BRANCH_NAME)}", parameters: [
+if (env.BRANCH_NAME in simulationBranch && currentBuild.result == 'SUCCESS') {
+    build job: "netperf-verilog/${simulationBranch[env.BRANCH_NAME]}", parameters: [
         string(name: 'BUILD_NUM', value: env.BUILD_NUMBER),
         string(name: 'NETPERF_HW_BRANCH', value: env.BRANCH_NAME),
         string(name: 'IKERNEL0', value: getBuildIkernel(env.BRANCH_NAME))

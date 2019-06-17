@@ -93,7 +93,7 @@ public:
     static void generateHashes(int hashes[DEPTH][2]);
 
     // destructor
-    virtual ~CountMinSketch();
+    ~CountMinSketch();
 };
 
 #endif //CMS_HPP

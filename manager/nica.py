@@ -32,33 +32,38 @@ class Gateway(object):
     cmd_write = 1 << 30
     cmd_go = 1 << 31
 
-    def write(self, address, value, ikernel_id=None, delay=None):
+    def write(self, address, value, ikernel_id=None, delay=None,
+              done_delay=None):
         '''Write a value to the gateway.'''
+        if done_delay is None:
+            done_delay = self.done_delay
         if ikernel_id is not None:
             self.nica.axi_write(self.ikernel_id, ikernel_id, delay=delay)
         self.nica.axi_write(self.data_i, value, delay=10)
         self.nica.axi_write(self.cmd, address | self.cmd_write | self.cmd_go, delay=self.cmd_delay)
         start = clock()
         while clock() - start <= TIMEOUT:
-            ret = self.nica.axi_read(self.done, delay=self.done_delay)
+            ret = self.nica.axi_read(self.done, delay=done_delay)
             if ret is None or ret:
                 break
         if ret == 0:
             raise TimeoutError()
         self.nica.axi_write(self.cmd, 0, delay=self.cmd_delay)
         start = clock()
-        while self.nica.axi_read(self.done, delay=self.done_delay):
+        while self.nica.axi_read(self.done, delay=done_delay):
             if clock() - start > TIMEOUT:
                 raise TimeoutError()
 
-    def read(self, address, ikernel_id=None, delay=None):
+    def read(self, address, ikernel_id=None, delay=None, done_delay=None):
         '''Read a value from the gateway.'''
+        if done_delay is None:
+            done_delay = self.done_delay
         if ikernel_id is not None:
             self.nica.axi_write(self.ikernel_id, ikernel_id, delay=delay)
         self.nica.axi_write(self.cmd, address | self.cmd_go, delay=10)
         start = clock()
         while clock() - start <= TIMEOUT:
-            ret = self.nica.axi_read(self.done, delay=self.done_delay)
+            ret = self.nica.axi_read(self.done, delay=done_delay)
             if ret is None or ret:
                 break
         if ret == 0:
@@ -66,7 +71,7 @@ class Gateway(object):
         ret = self.nica.axi_read(self.data_o, delay=self.cmd_delay)
         self.nica.axi_write(self.cmd, 0, delay=self.cmd_delay)
         start = clock()
-        while self.nica.axi_read(self.done, delay=self.done_delay):
+        while self.nica.axi_read(self.done, delay=done_delay):
             if clock() - start > TIMEOUT:
                 raise TimeoutError()
         return ret
@@ -114,6 +119,21 @@ class MMU(object):
                       self.BASE + 4 * ikernel_id, addr)
         self.nica.axi_write(self.BASE + 4 * ikernel_id, addr, delay=delay)
 
+class ToE(Gateway):
+    '''Control the TCP offload engine.'''
+
+    PORT = 0x0
+    IP = 0x1
+    LISTEN_PORT = 0x10
+    CONNECT = 0x11
+
+    def __init__(self, nica, base, done_delay=100, cmd_delay=25):
+        super(ToE, self).__init__(nica, base, done_delay, cmd_delay)
+
+    def listen(self, port, done_delay=300):
+        self.write(self.PORT, port)
+        return self.read(self.LISTEN_PORT, done_delay=done_delay)
+
 class NICA(ABC):
     '''NICA's main control object. This is an abstract class derived by the simulation version and
     the hardware version.'''
@@ -127,6 +147,7 @@ class NICA(ABC):
         self.custom_ring = CustomRing(self, 0x78)
         self.mmu = MMU(self)
         self.axi_cache = {}
+        self.toe = ToE(self, 0x518)
 
     @abstractmethod
     def axi_read(self, address, delay=None):

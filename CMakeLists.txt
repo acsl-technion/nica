@@ -23,9 +23,16 @@ set(XILINX_VIVADO_VERSION "$ENV{XILINX_VIVADO_VERSION}" CACHE STRING
 find_path(XILINX_VIVADO_HLS
     "include/hls_stream.h"
     HINTS /opt/Xilinx/Vivado_HLS/${XILINX_VIVADO_VERSION}
+          /opt/Xilinx/Vivado/${XILINX_VIVADO_VERSION}
     PATHS /opt/Xilinx/Vivado_HLS/2016.2
           /opt/Xilinx/Vivado_HLS/2016.4
     DOC "Xilinx Vivado HLS include directory")
+
+find_path(TOE_INCLUDE
+    "toe/toe.hpp"
+    HINTS ../../../fpga-network-stack/hls/
+          ../../fpga-network-stack/hls/
+    DOC "FPGA system's group TCP/IP stack HLS directory")
 
 set(XILINX_VIVADO_HLS_INCLUDE "${XILINX_VIVADO_HLS}/include")
 
@@ -44,13 +51,12 @@ include_directories(
   ${GTEST_INCLUDE_DIRS}
   ${UUID_INCLUDE_DIRS}
   ${XILINX_VIVADO_HLS_INCLUDE}
+  ${TOE_INCLUDE}
 )
 
 # pthreads
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
-
-link_directories(../googletest/googlemock/gtest)
 
 if(BUILD_SOFTWARE)
     add_subdirectory(libnica)
@@ -79,6 +85,7 @@ function(hls_target proj hls_target_name sources testbench_sources top_function)
             MEMCACHED_CACHE_SIZE=${MEMCACHED_CACHE_SIZE}
             MEMCACHED_KEY_SIZE=${MEMCACHED_KEY_SIZE}
             MEMCACHED_VALUE_SIZE=${MEMCACHED_VALUE_SIZE}
+            TOE_INCLUDEDIR=${TOE_INCLUDE}
             ${XILINX_VIVADO_HLS}/bin/vivado_hls
             ${proj}.tcl
         DEPENDS ${proj}_tests ${proj}.tcl ${CMAKE_SOURCE_DIR}/nica/ikernel.tcl nica-csim

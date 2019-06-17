@@ -223,10 +223,11 @@ protected:
         virt_gateway_wrapper([&] () { top(); }, gateway).write(address, data, ikernel_id, retries);
     }
 
-    void update_credits(hls_ik::ring_id_t ring_id, hls_ik::msn_t max_msn)
+    void update_credits(hls_ik::ring_id_t ring_id, hls_ik::msn_t max_msn, bool reset = true)
     {
         p.host_credit_regs.ring_id = ring_id;
         p.host_credit_regs.max_msn = max_msn;
+        p.host_credit_regs.reset = reset;
     }
 
     void test_passthrough(hls_ik::pipeline_ports& in, hls_ik::pipeline_ports& out,

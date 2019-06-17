@@ -67,6 +67,19 @@ namespace hls_ik {
             return 32;
         }
 
+        ap_uint<6> num_kept_bytes() const
+        {
+#pragma HLS inline
+            ap_uint<6> byte;
+            for (byte = 0; byte < 32; ++byte) {
+#pragma HLS unroll
+                if (!keep(31 - byte, 31 - byte))
+                    break;
+            }
+
+            return byte;
+        }
+
         bool operator ==(const axi_data& other) const { return data == other.data && keep == other.keep && last == other.last; }
 
         static const int width = 256 + 32 + 1;

@@ -36,10 +36,10 @@ class echo : public hls_ik::ikernel, public hls_ik::virt_gateway_impl<echo> {
 public:
     echo();
 
-    virtual void step(hls_ik::ports& p, hls_ik::tc_ikernel_data_counts& tc);
+    void step(hls_ik::ports& p, hls_ik::tc_ikernel_data_counts& tc);
 
-    virtual int reg_write(int address, int value, hls_ik::ikernel_id_t ikernel_id);
-    virtual int reg_read(int address, int* value, hls_ik::ikernel_id_t ikernel_id);
+    int reg_write(int address, int value, hls_ik::ikernel_id_t ikernel_id);
+    int reg_read(int address, int* value, hls_ik::ikernel_id_t ikernel_id);
 
 private:
     void echo_pipeline(hls_ik::ports& p, hls_ik::tc_ikernel_data_counts& tc);

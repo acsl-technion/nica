@@ -30,6 +30,7 @@
 #include "udp.h"
 #include "tc-ports.hpp"
 #include "arbiter.hpp"
+#include "toe_wrapper-impl.hpp"
 
 #include <boost/preprocessor/iteration/local.hpp>
 
@@ -54,6 +55,7 @@ struct nica_stats {
 struct nica_config {
     udp::config_n2h n2h;
     udp::config_h2n h2n;
+    hls_ik::gateway_registers toe;
 };
 
 using hls_ik::trace_event;
@@ -74,7 +76,8 @@ void nica(mlx::stream& nwp2sbu, mlx::stream& sbu2nwp, mlx::stream& cxp2sbu,
           trace_event events[NUM_TRACE_EVENTS],
           DECL_IKERNEL_PARAMS(),
           tc_ports& h2n_tc_out, tc_ports& h2n_tc_in,
-          tc_ports& n2h_tc_out, tc_ports& n2h_tc_in
+          tc_ports& n2h_tc_out, tc_ports& n2h_tc_in,
+          toe_app_ports& toe
     );
 
 #endif

@@ -83,6 +83,66 @@ namespace {
         }
     }
 
+    TEST_P(passthrough_test, push_header) {
+        metadata m;
+        packet_metadata pkt;
+        pkt.eth_dst = 1;
+        pkt.eth_src = 2;
+        pkt.ip_dst = 3;
+        pkt.ip_src = 4;
+        pkt.udp_dst = 5;
+        pkt.udp_src = 6;
+        m.set_packet_metadata(pkt);
+        m.length = 32;
+        m.ikernel_id = 1;
+        m.flow_id = 2;
+
+        write(PASSTHROUGH_RING_ID, 1, m.ikernel_id);
+        write(PASSTHROUGH_ADD_IP_PORT, 1, m.ikernel_id);
+
+        const int total = 100;
+        update_credits(1, total);
+	std::vector<axi_data> vec;
+
+        for (int i = 0; i < total; ++i) {
+            p.net.metadata_input.write(m);
+            ap_uint<32> rand_val = rand();//(rand()%100);
+            //   cout << "[" << i << "] : " << rand_val << "\n";
+            ap_uint<256> data = (ap_uint<14*8>(0),ap_uint<32>(rand_val), ap_uint<256 - 32 - 14*8>(0));
+            axi_data d(data, 0xffffffff, true);
+            vec.push_back(d);
+            p.net.data_input.write(d);
+
+            for (int i = 0; i < 10; ++i)
+                top();
+        }
+
+        metadata orig_metadata = m;
+
+        for (int i = 0; i < total; ++i) {
+            m = p.net.metadata_output.read();
+            EXPECT_EQ(m.ring_id, 1) << i;
+            EXPECT_EQ(m.get_custom_ring_metadata().end_of_message, true) << i;
+            EXPECT_EQ(m.ikernel_id, 1) << i;
+            EXPECT_EQ(m.flow_id, 2) << i;
+            EXPECT_EQ(m.length, 32 + 18) << i;
+            axi_data data = p.net.data_output.read();
+            EXPECT_FALSE(data.last);
+            EXPECT_EQ(data.keep, 0xffffffff);
+            EXPECT_EQ(data.data(256 - 1, 256 - 32),
+                      orig_metadata.get_packet_metadata().ip_src);
+            EXPECT_EQ(data.data(256 - 33, 256 - 48),
+                      orig_metadata.get_packet_metadata().udp_src);
+            EXPECT_EQ(ap_uint<14*8>(data.data(256 - 18 * 8 - 1, 0)),
+                      ap_uint<14*8>(vec[i].data(256 - 1, 256 - 14 * 8)));
+            data = p.net.data_output.read();
+            EXPECT_TRUE(data.last);
+            EXPECT_EQ(data.keep, ~((1U << 14) - 1));
+            EXPECT_EQ(ap_uint<32>(vec[i].data(256 - 14*8 - 1, 256 - 14*8 - 32)),
+                      ap_uint<32>(data.data(256 - 1, 256 - 32))) << i;
+        }
+    }
+
     INSTANTIATE_TEST_CASE_P(passthrough_test_instance, passthrough_test,
             ::testing::Values(&passthrough_top));
 

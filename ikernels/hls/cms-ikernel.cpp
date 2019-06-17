@@ -179,7 +179,7 @@ void cms_ikernel(hls_ik::ports& ik, hls_ik::ikernel_id& uuid,
 	DO_PRAGMA(HLS interface ap_none port=k_value)
 
 	using namespace hls_ik;
-    static const ikernel_id __constant_uuid = { CMS_UUID };
+    constexpr ikernel_id __constant_uuid = { CMS_UUID };
     cms_inst.step(ik, tc);
     cms_inst.write_to_heap(to_heap);
     cms_inst.read_heap(heap_out, k_value);

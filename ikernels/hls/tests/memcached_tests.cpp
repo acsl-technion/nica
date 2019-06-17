@@ -35,7 +35,7 @@ namespace {
             ::nica(nwp2sbu, sbu2nwp, cxp2sbu, sbu2cxp,
                    &c, &s, events,
                    BOOST_PP_ENUM_PARAMS(NUM_IKERNELS, ports),
-                   h2n_tc, h2n_tc, n2h_tc, n2h_tc);
+                   h2n_tc, h2n_tc, n2h_tc, n2h_tc, toe);
             memcached_top(p, id, gateway, tc);
             mem.mem(p.mem);
         }

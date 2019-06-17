@@ -187,6 +187,7 @@ namespace emulation {
                            h2n_flow_table_gateway(cfg.h2n.common.flow_table_gateway),
                            n2h_custom_ring_gateway(cfg.n2h.custom_ring_gateway);
     static tc_ports h2n_tc, n2h_tc;
+    static toe_app_ports toe;
 
     static std::vector<ikernel_wrapper> init_ikernels()
     {
@@ -213,7 +214,7 @@ namespace emulation {
 #define BOOST_PP_LOCAL_LIMITS (0, NUM_IKERNELS - 1)
 %:include BOOST_PP_LOCAL_ITERATE()
             ,
-            h2n_tc, h2n_tc, n2h_tc, n2h_tc
+            h2n_tc, h2n_tc, n2h_tc, n2h_tc, toe
         );
         for (auto& ik : ikernels)
             ik.step();

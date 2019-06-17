@@ -38,6 +38,7 @@ static const unsigned LOG_DEFAULT_CACHE_SIZE = hls_helpers::log2(MEMCACHED_DEFAU
 
 struct memcached_response {
     char data[REPLY_SIZE];
+    int size;
 
     memcached_response() {
         data[8] = 'V';
@@ -46,23 +47,6 @@ struct memcached_response {
         data[11] = 'U';
         data[12] = 'E';
         data[13] = ' ';
-        data[14 + MEMCACHED_KEY_SIZE] = ' ';
-        data[15 + MEMCACHED_KEY_SIZE] = '0'; // Flags
-        data[16 + MEMCACHED_KEY_SIZE] = ' ';
-
-        // Value size
-        hls_helpers::memcpy<VALUE_BYTES_SIZE>(&data[17 + MEMCACHED_KEY_SIZE], &ASCII_MEMCACHED_VALUE_SIZE[0]);
-
-        // Spaces
-        data[17 + MEMCACHED_KEY_SIZE + VALUE_BYTES_SIZE] = '\r';
-        data[18 + MEMCACHED_KEY_SIZE + VALUE_BYTES_SIZE] = '\n';
-        data[19 + MEMCACHED_KEY_SIZE + VALUE_BYTES_SIZE + MEMCACHED_VALUE_SIZE] = '\r';
-        data[20 + MEMCACHED_KEY_SIZE + VALUE_BYTES_SIZE + MEMCACHED_VALUE_SIZE] = '\n';
-        data[21 + MEMCACHED_KEY_SIZE + VALUE_BYTES_SIZE + MEMCACHED_VALUE_SIZE] = 'E';
-        data[22 + MEMCACHED_KEY_SIZE + VALUE_BYTES_SIZE + MEMCACHED_VALUE_SIZE] = 'N';
-        data[23 + MEMCACHED_KEY_SIZE + VALUE_BYTES_SIZE + MEMCACHED_VALUE_SIZE] = 'D';
-        data[24 + MEMCACHED_KEY_SIZE + VALUE_BYTES_SIZE + MEMCACHED_VALUE_SIZE] = '\r';
-        data[25 + MEMCACHED_KEY_SIZE + VALUE_BYTES_SIZE + MEMCACHED_VALUE_SIZE] = '\n';
     }
 };
 
@@ -73,6 +57,11 @@ struct memcached_parsed_request {
     memcached_key<MEMCACHED_KEY_SIZE> key;
     request_type type;
     hls_ik::metadata metadata;
+};
+
+struct memcached_raw_response {
+    char data[REPLY_SIZE];
+    hls_ik::ikernel_id_t ikernel_id;
 };
 
 struct memcached_key_value_pair {
@@ -147,6 +136,14 @@ public:
 
 struct memcached_context {
     memcached_context() :
+            ring_id(0)
+    {}
+
+    hls_ik::ring_id_t ring_id;
+};
+
+struct memcached_stats_context {
+    memcached_stats_context() :
             get_requests(0),
             get_req_hit(0),
             get_req_dropped_hits(0),
@@ -156,8 +153,7 @@ struct memcached_context {
             get_response(0),
             h2n_unknown(0),
             backpressure_drop_count(0),
-            tc_backpressure_drop_count(0),
-            ring_id(0)
+            tc_backpressure_drop_count(0)
     {}
 
     ap_uint<32> get_requests,
@@ -170,7 +166,6 @@ struct memcached_context {
             h2n_unknown,
             backpressure_drop_count,
             tc_backpressure_drop_count;
-    hls_ik::ring_id_t ring_id;
 };
 
 struct memcached_cache_context {
@@ -180,6 +175,12 @@ struct memcached_cache_context {
 };
 
 class memcached_cache_contexts : public context_manager<memcached_cache_context, MEMCACHED_LOG_RING_COUNT>
+{
+public:
+    int rpc(int address, int *value, hls_ik::ikernel_id_t ikernel_id, bool read);
+};
+
+class memcached_stats_contexts : public context_manager<memcached_stats_context, MEMCACHED_LOG_RING_COUNT>
 {
 public:
     int rpc(int address, int *value, hls_ik::ikernel_id_t ikernel_id, bool read);
@@ -195,9 +196,9 @@ public:
 
 class memcached : public hls_ik::ikernel, public hls_ik::virt_gateway_impl<memcached> {
 public:
-    virtual void step(hls_ik::ports& ports, hls_ik::tc_ikernel_data_counts& tc);
-    virtual int reg_write(int address, int value, hls_ik::ikernel_id_t ikernel_id);
-    virtual int reg_read(int address, int* value, hls_ik::ikernel_id_t ikernel_id);
+    void step(hls_ik::ports& ports, hls_ik::tc_ikernel_data_counts& tc);
+    int reg_write(int address, int value, hls_ik::ikernel_id_t ikernel_id);
+    int reg_read(int address, int* value, hls_ik::ikernel_id_t ikernel_id);
     memcached();
 
     typedef hls_ik::memory_t memory;
@@ -214,8 +215,8 @@ private:
         hls_ik::trace_event events[IKERNEL_NUM_EVENTS]);
     void handle_memory_responses(memory& m,
         hls_ik::tc_pipeline_data_counts& tc);
-    void parse_out_payload(const hls_ik::axi_data &d, ap_uint<1>& offset, char key[MEMCACHED_KEY_SIZE], char value[MEMCACHED_VALUE_SIZE]);
-    void parse_in_payload(const hls_ik::axi_data &d, char udp_header[8], char key[MEMCACHED_KEY_SIZE]);
+    void parse_out_payload();
+    void parse_in_payload(const hls_ik::axi_data &d, char udp_header[8], memcached_key<MEMCACHED_KEY_SIZE>& key);
     void drop_or_pass(hls_ik::pipeline_ports& in);
     void update_stats();
 
@@ -225,12 +226,12 @@ private:
     state _in_state, _dropper_state, _out_state;
     reply_state _reply_state;
     bool _dropper_action;
-    char _request_type_char, _response_type_char;
+    char _request_type_char;
     int _in_offset;
     memcached_response _current_response;
     memcached_cache<MEMCACHED_KEY_SIZE, MEMCACHED_VALUE_SIZE> _index;
     memcached_parsed_request _parsed_request;
-    memcached_key_value_pair _parsed_response;
+    memcached_raw_response _response;
     hls_ik::metadata _in_metadata, _out_metadata;
     programmable_fifo<bool, 300> _action_stream;
     programmable_fifo<memcached_key_value_pair,300> _kv_pairs_stream;
@@ -241,6 +242,7 @@ private:
     hls_helpers::duplicator<1, ap_uint<hls_ik::axi_data::width> > _raw_dup;
     hls_helpers::duplicator<1, ap_uint<hls_ik::metadata::width> > _metadata_dup;
     hls::stream<memcached_response> _reply_data_stream;
+    hls::stream<memcached_raw_response> _response_stream;
     packet_action _pa;
     ap_uint<1> _reply_word, _out_word;
     bool _intercept_tc_backpressure;
@@ -269,6 +271,7 @@ private:
 
     memcached_contexts ctx;
     memcached_cache_contexts cache_ctx;
+    memcached_stats_contexts stats_ctx;
 
     // handle_memory_responses state
     enum { MEM_RESP_IDLE, MEM_RESP_WAIT } mem_resp_state;

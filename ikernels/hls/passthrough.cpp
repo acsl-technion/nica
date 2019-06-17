@@ -51,30 +51,36 @@ void passthrough::intercept_in(pipeline_ports& p, tc_pipeline_data_counts& tc) {
     if (update())
         return;
 
-    if (!p.metadata_input.empty() && !_decisions.full()) {
+    if (!p.metadata_input.empty() && !_decisions.full() &&
+        !_ip_port_enable.full() && !_data_ip_port.full()) {
         metadata m = p.metadata_input.read();
         passthrough_context& c = contexts[m.ikernel_id];
-        bool backpressure = false;
-        // CR Mode
-        if (c.ring_id != 0) {
-            backpressure = !c.ignore_credits && !can_transmit(tc, m.ikernel_id, c.ring_id, m.length, HOST);
+        bool backpressure = !c.ignore_credits && !can_transmit(tc, m.ikernel_id, c.ring_id, m.length, HOST);
 
-            if (!backpressure) {
+        if (!backpressure) {
+            _ip_port_enable.write_nb(c.add_ip_port);
+            _empty_packet.write_nb(m.empty_packet());
+            if (c.add_ip_port) {
+                ap_uint<256> hdr = 0;
+                hdr(256 - 1,  256 - 32) = m.get_packet_metadata().ip_src;
+                hdr(256 - 33, 256 - 48) = m.get_packet_metadata().udp_src;
+                _data_ip_port.write_nb(axi_data(hdr, 0xffffc000, true));
+            }
+
+            // CR Mode
+            if (c.ring_id != 0) {
                 new_message(c.ring_id, HOST);
                 m.ring_id = c.ring_id;
                 custom_ring_metadata cr;
                 cr.end_of_message = 1;
                 m.var = cr;
-                m.length = m.length;
+                m.length = m.length + (c.add_ip_port ? 18 : 0);
                 m.verify();
             }
-        }
-
-        if (!backpressure) {
             p.metadata_output.write(m);
         }
 
-        _decisions.write(!backpressure);
+        _decisions.write_nb(!backpressure);
     }
 }
 
@@ -83,7 +89,10 @@ void passthrough::step(ports& p, tc_ikernel_data_counts& tc) {
     memory_unused(p.mem, dummy_update);
     pass_packets(p.host);
     intercept_in(p.net, tc.net);
-    dropper.filter(_decisions, p.net.data_input, p.net.data_output);
+    dropper.filter(_decisions, p.net.data_input, _data_payload);
+    push_ip_port.reorder(_data_ip_port, _empty_packet, _ip_port_enable,
+                         _data_payload, _data_out);
+    hls_helpers::link_axi_stream(_data_out, p.net.data_output);
 }
 
 int passthrough::reg_write(int address, int value, ikernel_id_t ikernel_id)
@@ -117,6 +126,8 @@ int passthrough_contexts::rpc(int address, int *v, ikernel_id_t ikernel_id, bool
             return gateway_access_field<ring_id_t, &passthrough_context::ring_id>(index, v, read);
         case PASSTHROUGH_IGNORE_CREDITS:
             return gateway_access_field<bool, &passthrough_context::ignore_credits>(index, v, read);
+        case PASSTHROUGH_ADD_IP_PORT:
+            return gateway_access_field<bool, &passthrough_context::add_ip_port>(index, v, read);
         default:
             if (read)
                 *v = -1;

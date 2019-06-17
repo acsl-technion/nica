@@ -108,9 +108,8 @@ namespace hls_ik {
     class virt_gateway_impl {
     public:
         static void gateway(derived* instance, virt_gateway_registers& virt) {
-#pragma HLS pipeline enable_flush ii=1
-        gateway_registers &r = virt.common;
-        DO_PRAGMA_SYN(HLS data_pack variable=r.cmd)
+            gateway_registers &r = virt.common;
+            DO_PRAGMA_SYN(HLS data_pack variable=r.cmd)
             if (r.cmd.go && !instance->axilite_gateway_done) {
                 int res = rpc(instance, virt);
                 if (res != GW_BUSY) {

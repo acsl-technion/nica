@@ -29,6 +29,7 @@
 #include <mlx.h>
 #include "nica-top.hpp"
 #include "nica-impl.hpp"
+#include "toe_wrapper-impl.hpp"
 #include <link_with_reg.hpp>
 
 #include <algorithm>
@@ -176,10 +177,10 @@ void nica_state<pipeline>::nica_step(
     DO_PRAGMA(HLS STREAM variable=over_threshold depth=FIFO_PACKETS);
     DO_PRAGMA(HLS STREAM variable=bool_pass_from_steering depth=FIFO_PACKETS);
 #define BOOST_PP_LOCAL_MACRO(i) \
-    DO_PRAGMA_SYN(HLS data_pack variable=data_udp_to_ikernel ## i); \
-    DO_PRAGMA_SYN(HLS data_pack variable=header_udp_to_ikernel ## i); \
-    DO_PRAGMA(HLS STREAM variable=header_udp_to_ikernel ## i depth=FIFO_PACKETS); \
-    DO_PRAGMA(HLS STREAM variable=ft_results_to_ik ## i depth=FIFO_PACKETS);
+    DO_PRAGMA_SYN(HLS data_pack variable=&data_udp_to_ikernel ## i); \
+    DO_PRAGMA_SYN(HLS data_pack variable=&header_udp_to_ikernel ## i); \
+    DO_PRAGMA(HLS stream variable=&header_udp_to_ikernel ## i depth=FIFO_PACKETS); \
+    DO_PRAGMA(HLS stream variable=&ft_results_to_ik ## i depth=FIFO_PACKETS);
 #define BOOST_PP_LOCAL_LIMITS (0, NUM_IKERNELS - 1)
 %:include BOOST_PP_LOCAL_ITERATE()
 
@@ -300,7 +301,8 @@ void nica(mlx::stream& prt_nw2sbu, mlx::stream& sbu2prt_nw, mlx::stream& prt_cx2
           trace_event events[NUM_TRACE_EVENTS],
           DECL_IKERNEL_PARAMS(),
           tc_ports& h2n_tc_out, tc_ports& h2n_tc_in,
-          tc_ports& n2h_tc_out, tc_ports& n2h_tc_in
+          tc_ports& n2h_tc_out, tc_ports& n2h_tc_in,
+          toe_app_ports& toe
     )
 {
 #pragma HLS INTERFACE axis port=prt_nw2sbu
@@ -332,6 +334,7 @@ void nica(mlx::stream& prt_nw2sbu, mlx::stream& sbu2prt_nw, mlx::stream& prt_cx2
 // #  pragma HLS INTERFACE s_axilite port=cfg->h2n.lossy offset=0x450
     GATEWAY_OFFSET(cfg->h2n.common.arbiter_gateway, 0x458, 0x460, 0x470)
 #  pragma HLS INTERFACE s_axilite port=stats->h2n offset=0x500
+    GATEWAY_OFFSET(cfg->toe, 0x518, 0x520, 0x530)
 
 #  pragma HLS INTERFACE s_axilite port=stats->flow_table_size offset=0x800
 #endif
@@ -343,20 +346,22 @@ void nica(mlx::stream& prt_nw2sbu, mlx::stream& sbu2prt_nw, mlx::stream& prt_cx2
     IKERNEL_PORTS_PRAGMAS(ik ## n)
 #define BOOST_PP_LOCAL_LIMITS (0, NUM_IKERNELS - 1)
 %:include BOOST_PP_LOCAL_ITERATE()
+    TOE_PORTS_PRAGMAS(toe)
 
         using hls_ik::ports;
 #if defined(__SYNTHESIS__)
         static nica_state<&ports::net> n2h;
         static nica_state<&ports::host> h2n;
 #endif
+        static toe_control toe_c;
 #define BOOST_PP_LOCAL_MACRO(n) \
         static hls_ik::ports ik_buf ## n; \
         static link_ports linker ## n; \
         \
-        DO_PRAGMA(HLS STREAM variable=ik_buf ## n.host.metadata_input depth=FIFO_WORDS); \
-        DO_PRAGMA(HLS STREAM variable=ik_buf ## n.host.data_input depth=FIFO_WORDS); \
-        DO_PRAGMA(HLS STREAM variable=ik_buf ## n.net.metadata_input depth=FIFO_WORDS); \
-        DO_PRAGMA(HLS STREAM variable=ik_buf ## n.net.data_input depth=FIFO_WORDS);
+        DO_PRAGMA(HLS stream variable=&ik_buf ## n.host.metadata_input depth=FIFO_WORDS); \
+        DO_PRAGMA(HLS stream variable=&ik_buf ## n.host.data_input depth=FIFO_WORDS); \
+        DO_PRAGMA(HLS stream variable=&ik_buf ## n.net.metadata_input depth=FIFO_WORDS); \
+        DO_PRAGMA(HLS stream variable=&ik_buf ## n.net.data_input depth=FIFO_WORDS);
 #define BOOST_PP_LOCAL_LIMITS (0, NUM_IKERNELS - 1)
 %:include BOOST_PP_LOCAL_ITERATE()
 
@@ -366,6 +371,8 @@ void nica(mlx::stream& prt_nw2sbu, mlx::stream& sbu2prt_nw, mlx::stream& prt_cx2
         h2n.nica_step(prt_cx2sbu, sbu2prt_nw,
             cfg->h2n, stats->h2n, &events[TRACE_H2N],
             BOOST_PP_ENUM_PARAMS(NUM_IKERNELS, ik_buf), h2n_tc_out, h2n_tc_in);
+        toe_c.toe_c(cfg->toe);
+        link(toe_c.p, toe);
 
 #define BOOST_PP_LOCAL_MACRO(n) \
         linker ## n.link(ik_buf ## n, ik ## n);

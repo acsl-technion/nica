@@ -45,9 +45,9 @@ public:
 
     cache()
     {
-#pragma HLS resource core=RAM_2P variable=tags
-#pragma HLS resource core=RAM_2P variable=values
-#pragma HLS resource core=RAM_2P variable=valid
+#pragma HLS resource core=RAM_T2P_BRAM variable=tags
+#pragma HLS resource core=RAM_T2P_BRAM variable=values
+#pragma HLS resource core=RAM_T2P_BRAM variable=valid
         for (int i = 0; i < Size; ++i) {
             valid[i] = false;
             tags[i] = Tag();

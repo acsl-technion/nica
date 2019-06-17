@@ -19,8 +19,8 @@ class Events(IntEnum):
     '''Enumeration of all the events.'''
 
     NO_EVENT = 0x00
-    EVENT_TRUE = 0x01
-    EVENT_FALSE = 0x02
+    EVENT_FALSE = 0x01
+    EVENT_TRUE = 0x02
 
     NWP2SBU_EOP = 0x10
     NWP2SBU_SOP = 0x11
@@ -84,6 +84,14 @@ class Events(IntEnum):
     DRAM_RDATA_VLD = 0x82
     DRAM_RDATA_LAST = 0x83
 
+    NET2TOE_EOP = 0x90
+    TOE2NET_EOP = 0x91
+    TOE2APP_EOP = 0x92
+    TOE_NOTIFY = 0x93
+    TOE_RX_REQ = 0x94
+    TOE_RX_RSP = 0x95
+    TOE_META2IK = 0x96
+
     @staticmethod
     def local_event(index):
         '''Calculate a local event index.'''
@@ -122,9 +130,15 @@ class CLBEvents(IntEnum):
 class Event(object):
     '''Parsed events including metadata.'''
     def __init__(self, value):
+        if value is None:
+            self.event_id = None
+            self.clb_index = None
+            return
+
         try:
             self.event_id = Events(value)
             self.clb_index = None
+            return
         except ValueError:
             pass
 
@@ -173,32 +187,28 @@ class ConfigurableLogicBlock(object):
         '''Return the logic equation byte of the given negate[4] and is_or[3] lists.'''
         ret = 0
         for j in range(min(4, len(negate))):
-            print(j)
             neg = negate[j]
             ret = ret | (neg << (6 - j * 2))
-            print('0x%02x' % ret)
         for j in range(3):
-            print(j)
             if len(is_or) > j:
                 func = is_or[j]
             else:
                 func = 1
             ret = ret | (func << (5 - j * 2))
-            print('0x%02x' % ret)
         return ret
 
     def select_signals(self, signals, negate, is_or):
         '''Configure a given set of signals and a boolean function of this CLB.'''
         assert len(signals) <= 4
         events = reduce(operator.or_, (signal << j * 8 for (j, signal) in enumerate(signals)))
-        print('CLB %d: writing 0x%08x to 0x%08x' % (self.index, events,
-                                                    self.signal_selector_addr()))
+        #print('CLB %d: writing 0x%08x to 0x%08x' % (self.index, events,
+        #                                            self.signal_selector_addr()))
         self.nica.axi_write(self.signal_selector_addr(), events)
 
         equation = self.logic_equation_function(negate, is_or)
         ctrl22 = NICA.axi_read(self.nica, self.SIGMON_CTRL22) or 0
         ctrl22 = ctrl22 | (equation << (self.index * 8))
-        print('CLB %d: writing 0x%08x to 0x%08x' % (self.index, ctrl22, self.SIGMON_CTRL22))
+        #print('CLB %d: writing 0x%08x to 0x%08x' % (self.index, ctrl22, self.SIGMON_CTRL22))
         self.nica.axi_write(self.SIGMON_CTRL22, ctrl22)
 
     def set_intervals(self, start=None, mid=None):
@@ -207,6 +217,38 @@ class ConfigurableLogicBlock(object):
             self.nica.axi_write(self.start_interval_limit_addr(), start)
         if mid is not None:
             self.nica.axi_write(self.mid_interval_limit_addr(), mid)
+
+class Counter(object):
+    '''Tracks a combination of signals. See sigmon_logic_block.v.'''
+
+    SIGMON_CTRL100 = 0x8100
+    SIGMON_CTRL104 = 0x8104
+
+    SINGLE_EVENT_COUNT_NOLIMIT = 0x00 # Count num of event_in occurrences,
+    SINGLE_EVENT_COUNT_LIMIT = 0x01   # Count num of event_in occurrences. Assert count_event if count > LIMIT
+    REPEAT_COUNT_LIMIT = 0x02         # Count num of event_in occurrences. Assert count_event if count > LIMIT and repeat counting
+    DUAL_EVENTS_COUNT_LIMIT = 0x03    # Count num of both event_in & clear_in occurrences. Assert count_event if count > LIMIT
+    WINDOW_COUNT_LIMIT = 0x04         # Count num of event_in between enable_in and clear_in. Assert count_event if count > LIMIT
+    DUAL_EVENTS_LATENCY = 0x05        # Count num of event_in occurrences, and clear counter upon clear_in. Assert count_event if count > LIMIT
+    DUAL_EVENTS_BALANCE = 0x06        # Separately count num of event_in & clear_in occurrences in counter1 & counter2, respectively.
+
+    def __init__(self, _nica, index):
+        self.nica = _nica
+        self.index = index
+        self.base = self.SIGMON_CTRL100 + self.index * 0x10
+
+    def set_counter(self, enable_event = Events.EVENT_TRUE, 
+                          disable_event = Events.NO_EVENT,
+                          counted_event = Events.EVENT_TRUE,
+                          mode = 0x00, # = Counter.SINGLE_EVENT_COUNT_NOLIMIT,
+                          limit = 0):
+        events_select = (mode << 24) | (counted_event << 16) | (disable_event << 8) | enable_event
+        print('%d: events_select = 0x%x' % (self.index, events_select))
+        self.nica.axi_write(self.base, events_select)
+        self.nica.axi_write(self.base + 0x4, limit)
+
+    def read(self):
+        return self.nica.axi_read(self.base + 0x4)
 
 class Sigmon(object):
     '''Signal monitoring control object.'''
@@ -228,6 +270,7 @@ class Sigmon(object):
     def __init__(self, _nica):
         self.nica = _nica
         self.clbs = [ConfigurableLogicBlock(_nica, i) for i in range(4)]
+        self.counters = [Counter(_nica, i) for i in range(12)]
 
     def has_sigmon(self):
         '''Check whether image has signal monitoring enabled.'''
@@ -298,16 +341,35 @@ def main():
     cmd = sys.argv[1]
 
     if cmd == 'enable':
-        sigmon.clbs[0].select_signals([Events.DRAM_WADDR_VLD], [0], [])
-        sigmon.clbs[1].select_signals([Events.DRAM_WDATA_VLD], [0], [])
-        sigmon.clbs[2].select_signals([Events.DRAM_WDONE_VLD], [0], [])
+        sigmon.clbs[0].select_signals([Events.SBU2NWP_RDY], [0], [])
+        sigmon.clbs[1].select_signals([Events.SBU2NWP_VLD], [0], [])
+        sigmon.clbs[2].select_signals([Events.NWP2SBU_RDY], [0], [])
+        sigmon.clbs[3].select_signals([Events.NWP2SBU_VLD], [0], [])
+        #sigmon.clbs[2].select_signals([Events.DRAM_WDONE_VLD], [0], [])
         #sigmon.clbs[3].select_signals([Events.DRAM_WDATA_VLD], [0], [])
-        for i in range(3):
+        for i in range(4):
             sigmon.clbs[i].set_intervals(start=0, mid=0)
-        events = [[CLBEvents.identifier(i, CLBEvents.OUT_ON), CLBEvents.identifier(i, CLBEvents.OUT_OFF)]
-                  for i in range(4)]
-        events = sum(events, [])
+        #events = [[CLBEvents.identifier(i, CLBEvents.OUT_ON), CLBEvents.identifier(i, CLBEvents.OUT_OFF)]
+        #          for i in range(4)]
+        events = []
+        events = sum(events, [Events.TOE2NET_EOP, 0, Events.TOE2APP_EOP, 0,
+                              Events.TOE_NOTIFY, 0, Events.TOE_RX_REQ, 0,
+                              Events.TOE_RX_RSP, 0, Events.TOE_META2IK, 0,
+                              Events.NET2TOE_EOP, 0])
         sigmon.configure_events(events)
+        #sigmon.configure_events([Events.NWP2SBU_SOP, Events.NWP2SBU_EOP,
+        #                         Events.SBU2NWP_VLD, 0, Events.SBU2NWP_RDY, 0],
+        #                        delay=10)
+
+        sigmon.counters[0].set_counter()
+        sigmon.counters[1].set_counter(counted_event=Events.NET2TOE_EOP)
+        sigmon.counters[2].set_counter(counted_event=Events.TOE2NET_EOP)
+        sigmon.counters[3].set_counter(counted_event=Events.TOE2APP_EOP)
+        sigmon.counters[4].set_counter(counted_event=Events.TOE_NOTIFY)
+        sigmon.counters[5].set_counter(counted_event=Events.TOE_RX_REQ)
+        sigmon.counters[6].set_counter(counted_event=Events.TOE_RX_RSP)
+        sigmon.counters[7].set_counter(counted_event=Events.TOE_META2IK)
+        sigmon.counters[8].set_counter(counted_event=Events.NWP2SBU_EOP)
         sigmon.enable_sigmon(Events.SIGMON_ENABLED, delay=10)
 
     elif cmd == 'disable':
@@ -331,6 +393,10 @@ def main():
         for timestamp, identifier, event in results:
             sys.stdout.write("%8d: 0x%02x %s" % (timestamp, identifier, event))
             sys.stdout.write('\n')
+
+    elif cmd == 'counters':
+        for i, counter in enumerate(sigmon.counters):
+            print("%2d: %d" % (i, counter.read()))
 
 if __name__ == '__main__':
     main()

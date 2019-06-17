@@ -12,6 +12,7 @@ foreach(pcap_file udp_rr.pcap
         memcached-all-responses-16.pcap
         memcached-set-16.pcap
         ping.pcap pong.pcap
+		coap-requests.pcap coap-filtered.pcap
 )
     add_custom_target(${pcap_file}
         DEPENDS ${CMAKE_SOURCE_DIR}/ikernels/hls/tests/${pcap_file}
@@ -61,6 +62,9 @@ foreach(memcached_target memcached_tests memcached-emu)
 		-DMEMCACHED_VALUE_SIZE=${MEMCACHED_VALUE_SIZE})
 endforeach(memcached_target)
 
+# Coap
+add_ikernel(coap "hls/coap.cpp;hls/passthrough.cpp" "hls/tests/coap_tests.cpp;../nica/hls/tests/tb.cpp" coap coap_ikernel "coap-requests.pcap;coap-filtered.pcap")
+target_link_libraries(coap_tests ssl crypto)
 ### Add your ikernel here:
 # add_ikernel(ikernel sources testbench_sources hls_target_name top_function [testbench_files])
 

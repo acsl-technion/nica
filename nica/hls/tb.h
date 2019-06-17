@@ -77,6 +77,8 @@ namespace udp_tb {
 
         trace_event events[NUM_TRACE_EVENTS];
 
+        toe_app_ports toe;
+
         unsigned count;
     protected:
         /** Compare a filtered pcap file against a different filtered pcap file. */

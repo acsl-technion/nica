@@ -31,6 +31,7 @@
 #include <flow_table.hpp>
 #include <context_manager.hpp>
 #include <drop_or_pass.hpp>
+#include <push_header.hpp>
 
 #define LOG_NUM_PASSTHROUGH_CONTEXTS 6
 #define NUM_PASSTHROUGH_CONTEXTS (1 << LOG_NUM_PASSTHROUGH_CONTEXTS)
@@ -44,6 +45,7 @@ struct passthrough_context {
 
     hls_ik::ring_id_t ring_id;
     bool ignore_credits;
+    bool add_ip_port;
 };
 
 class passthrough_contexts : public context_manager<passthrough_context, LOG_NUM_PASSTHROUGH_CONTEXTS>
@@ -55,16 +57,20 @@ public:
 class passthrough : public hls_ik::ikernel, public hls_ik::virt_gateway_impl<passthrough>
 {
 public:
-    virtual int reg_write(int address, int value, hls_ik::ikernel_id_t ikernel_id);
-    virtual int reg_read(int address, int* value, hls_ik::ikernel_id_t ikernel_id);
-    virtual void step(hls_ik::ports& p, hls_ik::tc_ikernel_data_counts& tc);
+    int reg_write(int address, int value, hls_ik::ikernel_id_t ikernel_id);
+    int reg_read(int address, int* value, hls_ik::ikernel_id_t ikernel_id);
+    void step(hls_ik::ports& p, hls_ik::tc_ikernel_data_counts& tc);
 protected:
     enum { DECISION, STREAM } _state;
 
-    hls::stream<bool> _decisions;
+    hls::stream<bool> _decisions, _ip_port_enable, _empty_packet;
     drop_or_pass dropper;
+    bool _action;
     void intercept_in(hls_ik::pipeline_ports& p, hls_ik::tc_pipeline_data_counts& tc);
     passthrough_contexts contexts;
+    hls_ik::data_stream _data_ip_port, _data_payload, _data_out;
+    static const int header_bits = (32 - 14) * 8;
+    push_header<header_bits> push_ip_port;
 };
 
 #endif // PASSTHROUGH_IMPL_HPP

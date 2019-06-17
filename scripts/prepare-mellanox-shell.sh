@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 #
 # Copyright (c) 2016-2017 Haggai Eran, Gabi Malka, Lior Zeno, Maroun Tork
 # All rights reserved.
@@ -24,7 +24,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-tarball=${1:-newton_ku060_2_40g_v640.tar}
+tarball=$(readlink -f ${1:-newton_ku060_2_40g_v640.tar})
 
 if [ "$#" -lt 1 ] ; then
   echo "Missing argument: tarball"
@@ -36,20 +36,46 @@ if [ ! -f "$tarball" ] ; then
   exit 1
 fi
 
-rm -rf user
+cam_size=${2-2k}
+case $cam_size in
+10k)
+  cam_url=https://github.com/haggaie/fpga-network-stack/raw/master/ip/SmartCamCtl.dcp
+  ;;
+2k)
+  cam_url=https://github.com/fpgasystems/caribou/raw/master/hw/ip/system-dcp/SmartCamCtl_2k_experimental_opt.dcp
+  ;;
+*)
+  echo "Usupported CAM size: $cam_size. Use 2k or 10k"
+  exit 1
+esac
 
-dirs=(user/{examples/exp_hls/{vlog,xdc},mlx,project,scripts,tb/exp_vlog})
+rm -rf user
+mkdir -p user
+cd user
+
+dirs=({examples/exp_hls/{vlog,xdc},mlx,project,scripts,tb/exp_vlog})
 tar xvf $tarball ${dirs[@]}
+cd ..
 patch -p1 -d user < ../scripts/mellanox-shell-scripts.patch
 
 ln -snf examples/exp_hls user/sources
+ln -snf ../../../../nica/sysvlog user/sources/
 
 ln -snf ../../../../nica/nica/40Gbps/impl/ip/hdl/verilog user/examples/exp_hls/vlog/nica
-for ikernel in cms echo memcached passthrough pktgen threshold ; do
+for ikernel in cms echo memcached passthrough pktgen threshold coap ; do
   ln -snf ../../../../ikernels/$ikernel/40Gbps/impl/ip/hdl/verilog user/examples/exp_hls/vlog/$ikernel
 done
 
 ln -snf ../../../../nica/xci user/examples/exp_hls/xci
+wget -N "$cam_url" -O user/examples/exp_hls/xci/SmartCamCtl.dcp
+ln -snf ../../../iprepo user/examples/exp_hls/ip_repo
 cd user/examples/exp_hls/vlog
 cp -sf ../../../../../nica/verilog/* .
 cd -
+
+# Disable XDC as it has been removed from the repository
+# (coap now works with a single clock)
+#
+# cd user/examples/exp_hls/xdc
+# cp -sf ../../../../../ikernels/xdc/* .
+# cd -
