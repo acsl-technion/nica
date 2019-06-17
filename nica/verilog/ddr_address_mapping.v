@@ -13,7 +13,8 @@
 // Page address mapping is implemented via a lookup table, of 1024 x 19 bit wide entries.
 // Used pages address mapping must be preloaded to the address mapping table, implemented within the top level verilog wrapper
 // Both read and write ikernel transactions assume the same address mapping table.
-// The address mapping table is addressable via AXI-Lite, allocated to addresses: 0x9000..0x9400
+// The address mapping table is addressable via AXI-Lite, allocated to
+// addresses: 0x9000..0x9400 (addresses are aligned to 4-byte words)
 //
 //
 // Setup:
@@ -457,7 +458,7 @@ ddr_adrs_mapping ddr_addr_table (
   .clka(clk),    // input wire clka
 
 // Map table is loaded via axi-lite:
-  .addra(axi_waddr[9:0]),  // input wire [9 : 0]
+  .addra({2'b0, axi_waddr[9:2]}),  // input wire [9 : 0]
   .wea(ddr_adrs_table_wr),      // input wire [0 : 0] wea
   .dina(ddr_adrs_table_datain),    // input wire [31 : 0] dina
 

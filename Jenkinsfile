@@ -32,8 +32,8 @@ properties ([parameters([
            description: 'The version of Vivado HLS to use for the build',
            choices: ['2016.2', '2016.4', '2017.2'].join('\n')),
     string(name: 'MEMCACHED_CACHE_SIZE', defaultValue: '4096', description: 'Memcached cache size in entries'),
-    string(name: 'MEMCACHED_KEY_SIZE', defaultValue: '10', description: 'Memcached key size in bytes'),
-    string(name: 'MEMCACHED_VALUE_SIZE', defaultValue: '10', description: 'Memcached value size in bytes'),
+    string(name: 'MEMCACHED_KEY_SIZE', defaultValue: '16', description: 'Memcached key size in bytes'),
+    string(name: 'MEMCACHED_VALUE_SIZE', defaultValue: '16', description: 'Memcached value size in bytes'),
     string(name: 'NUM_TC', defaultValue: '4', description: 'Number of traffic classes'),
 ])])
 

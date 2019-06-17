@@ -70,14 +70,32 @@ class Arbiter(Gateway):
     def __init__(self, nica, base, done_delay=100, cmd_delay=25):
         super(Arbiter, self).__init__(nica, base, done_delay, cmd_delay)
 
-    def set_quantum(self, tc, quantum, delay=None):
-        """Speed will be quantum / (sum of all quanta)"""
-        self.write(self.ARBITER_SCHEDULER +
-                   tc * self.ARBITER_SCHEDULER_STRIDE +
-                   self.SCHEDULER_DRR_QUANTUM, quantum, delay=delay)
+    def quantum_address(self, traffic_class):
+        '''Calculate gateway offset of the quantum of a given TC'''
+        return self.ARBITER_SCHEDULER + traffic_class * self.ARBITER_SCHEDULER_STRIDE + \
+               self.SCHEDULER_DRR_QUANTUM
 
-    def set_log_saturation(self, port, log_saturation, delay=None):
-        self.write(self.ARBITER_PORT_STRIDE * port + self.ARBITER_BUCKET_LOG_SATURATION, log_saturation, delay=delay)
+    def set_quantum(self, traffic_class, quantum, delay=None):
+        """Speed will be quantum / (sum of all quanta)"""
+        self.write(self.quantum_address(traffic_class), quantum, delay=delay)
+
+    def get_quantum(self, traffic_class, delay=None):
+        '''Return the current quantum'''
+        return self.read(self.quantum_address(traffic_class), delay=delay)
+
+class MMU(object):
+    BASE = 0x9000
+
+    def __init__(self, nica):
+        self.nica = nica
+
+    def set_mapping(self, ikernel_id, ddr_address, delay=None):
+        assert isinstance(ikernel_id, int)
+        assert isinstance(ddr_address, int)
+        # Page aligned
+        assert ddr_address & ((1 << 12) - 1) == 0
+
+        self.nica.axi_write(self.BASE + 4 * ikernel_id, ddr_address >> 12, delay=delay)
 
 class NICA(ABC):
     '''NICA's main control object. This is an abstract class derived by the simulation version and
@@ -90,6 +108,7 @@ class NICA(ABC):
         self.n2h_arbiter = Arbiter(self, 0x58)
         self.h2n_arbiter = Arbiter(self, 0x458)
         self.custom_ring = CustomRing(self, 0x78)
+        self.mmu = MMU(self)
 
     @abstractmethod
     def axi_read(self, address, delay=None):
@@ -252,7 +271,8 @@ class FlowTable(Gateway):
     FT_RESULT_IKERNEL = 0x19
     FT_RESULT_IKERNEL_ID = 0x1a
 
-    def set_flow_table_mask(self, daddr, dport, saddr, sport, delay=None):
+    def set_flow_table_mask(self, daddr=False, dport=False, saddr=False,
+                            sport=False, delay=None):
         '''Set the header fields that are included as part of the flow match.'''
         mask = 0
         if saddr:

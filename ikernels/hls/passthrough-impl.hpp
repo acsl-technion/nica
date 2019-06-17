@@ -39,17 +39,16 @@
 DECLARE_TOP_FUNCTION(passthrough_top);
 
 struct passthrough_context {
-    passthrough_context() : ring_id(0) {}
+    passthrough_context() : ring_id(0), ignore_credits(false) {}
 
     hls_ik::ring_id_t ring_id;
+    bool ignore_credits;
 };
 
 class passthrough_contexts : public context_manager<passthrough_context, LOG_NUM_PASSTHROUGH_CONTEXTS>
 {
 public:
     int rpc(int address, int *value, hls_ik::ikernel_id_t ikernel_id, bool read);
-
-    hls_ik::ring_id_t find_ring(const hls_ik::ikernel_id_t& ikernel_id);
 };
 
 class passthrough : public hls_ik::ikernel, public hls_ik::virt_gateway_impl<passthrough>
@@ -63,10 +62,9 @@ protected:
 
     hls::stream<bool> _decisions;
     bool _action;
-    void intercept_in(hls_ik::pipeline_ports& p, hls_ik::credit_update_registers& host_credit_regs);
+    void intercept_in(hls_ik::pipeline_ports& p);
     void drop_or_pass(hls_ik::pipeline_ports& p);
     passthrough_contexts contexts;
-
 };
 
 #endif // PASSTHROUGH_IMPL_HPP

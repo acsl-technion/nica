@@ -210,6 +210,26 @@ void consume(hls::stream<T>& in)
 }
 
 template <typename T>
+void consume(hls::stream<T>& in, bool enabled)
+{
+    T tmp;
+    if (enabled && !in.empty())
+/* In simulation build we read a FIFO, but with synthesis it is an AXI4-Stream.
+ * This causes an error when trying to use read_nb about an interface mismatch:
+ *
+ *   ERROR: [XFORM 203-801] Interface read on 'in.V.V' has incompatible types.
+ *   Possible cause(s): data pack is only applied on source(port) or
+ *   destination(variable).
+ *   ERROR: [HLS 200-70] Failed building synthesis data model.
+ */
+#ifdef SIMULATION_BUILD
+        in.read_nb(tmp);
+#else
+        in.read(tmp);
+#endif
+}
+
+template <typename T>
 class constant_stream
 {
 public:
@@ -219,6 +239,23 @@ public:
     {
         if (!out.full())
             out.write(value);
+    }
+
+    void operator()(hls::stream<T>& out, bool enabled)
+    {
+        if (enabled && !out.full())
+/* In simulation build we drive a FIFO, but with synthesis it is an AXI4-Stream.
+ * This causes an error when trying to use write_nb about an interface mismatch:
+ *
+ *   CRITICAL WARNING: [XFORM 203-801] Interface write on 'out.V.V' has
+ *   incompatible types. Possible cause(s): data pack is only applied on
+ *   source(variable) or destination(port).
+ */
+#ifdef SIMULATION_BUILD
+            out.write_nb(value);
+#else
+            out.write(value);
+#endif
     }
 private:
     T value;
@@ -234,6 +271,12 @@ template <typename T>
 void produce(hls::stream<T>& out)
 {
     constant(T(0))(out);
+}
+
+template <typename T>
+void produce(hls::stream<T>& out, bool enabled)
+{
+    constant(T(0))(out, enabled);
 }
 
 template <unsigned Size, typename T>

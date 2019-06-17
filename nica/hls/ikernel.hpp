@@ -406,6 +406,28 @@ void pass_packets(pipeline_ports& p);
 
 void init(hls_ik::ports& p);
 
+static inline void link_pipeline_sim(hls_ik::pipeline_ports& in, hls_ik::pipeline_ports& out)
+{
+#pragma HLS inline
+    hls_helpers::link_axi_to_fifo(in.metadata_input, out.metadata_input);
+    hls_helpers::link_axi_to_fifo(in.data_input, out.data_input);
+    hls_helpers::link_axi_stream(out.metadata_output, in.metadata_output);
+    hls_helpers::link_axi_stream(out.data_output, in.data_output);
+
+    for (int i = 0; i < NUM_TC; ++i) {
+         out.tc_meta_counts[i] = in.tc_meta_counts[i];
+         out.tc_data_counts[i] = in.tc_data_counts[i];
+    }
+}
+
+static inline void link_ports_sim(hls_ik::ports& in, hls_ik::ports& out)
+{
+#pragma HLS inline
+    link_pipeline_sim(in.host, out.host);
+    link_pipeline_sim(in.net, out.net);
+    out.host_credit_regs = in.host_credit_regs;
+}
+
 } // namespace
 
 #define DECLARE_TOP_FUNCTION(__name) void __name(\
@@ -418,9 +440,11 @@ void init(hls_ik::ports& p);
 #ifdef SIMULATION_BUILD
 #  define _PragmaSyn(x)
 #  define DO_PRAGMA_SYN(x)
+#  define IF_SIM(x, y) x
 #else
 #  define _PragmaSyn(x) _Pragma(x)
 #  define DO_PRAGMA_SYN(x) DO_PRAGMA(x)
+#  define IF_SIM(x, y) y
 #endif
 
 #define TC_COUNTS_PRAGMAS(__tc_counts) \
@@ -462,10 +486,16 @@ DECLARE_TOP_FUNCTION(__name) \
     VIRT_GATEWAY_OFFSET(gateway, 0x1014, 0x101c, 0x102c, 0x1034) \
     _PragmaSyn("HLS interface ap_ctrl_none port=return") \
 \
+    static hls_ik::ports ports_buf; \
+    IF_SIM(link_ports_sim(ik, ports_buf);,) \
+    DO_PRAGMA_SIM(HLS stream variable=ports_buf.host.metadata_input depth=256); \
+    DO_PRAGMA_SIM(HLS stream variable=ports_buf.host.data_input depth=256); \
+    DO_PRAGMA_SIM(HLS stream variable=ports_buf.net.metadata_input depth=256); \
+    DO_PRAGMA_SIM(HLS stream variable=ports_buf.net.data_input depth=256); \
     using namespace hls_ik; \
     static const ikernel_id __constant_uuid = { __uuid }; \
-    INSTANCE(__class).host_credits_update(ik.host_credit_regs); \
-    INSTANCE(__class).step(ik); \
+    INSTANCE(__class).host_credits_update(IF_SIM(ports_buf, ik).host_credit_regs); \
+    INSTANCE(__class).step(IF_SIM(ports_buf, ik)); \
     INSTANCE(__class).gateway(&INSTANCE(__class), gateway); \
     output_uuid: uuid = __constant_uuid; \
 }

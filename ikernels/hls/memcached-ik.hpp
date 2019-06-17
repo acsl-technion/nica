@@ -205,7 +205,7 @@ public:
 private:
     memcached_response generate_response(const memcached_parsed_request &parsed_request, const memcached_value<MEMCACHED_VALUE_SIZE> &value);
     void parse_packet(hls_ik::trace_event events[IKERNEL_NUM_EVENTS]);
-    void action_resolution(hls_ik::pipeline_ports& in, hls_ik::credit_update_registers& host_credit_regs);
+    void action_resolution(hls_ik::pipeline_ports& in);
     void reply_cached_value(hls_ik::pipeline_ports &out);
     void intercept_out(hls_ik::pipeline_ports &out);
     void handle_parsed_packet(memory& m,

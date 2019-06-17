@@ -44,7 +44,7 @@ namespace hls_ik {
     }
 }
 
-void passthrough::intercept_in(pipeline_ports& p, credit_update_registers& host_credit_regs) {
+void passthrough::intercept_in(pipeline_ports& p) {
 #pragma HLS pipeline enable_flush ii=3
     if (contexts.update())
         return;
@@ -53,15 +53,15 @@ void passthrough::intercept_in(pipeline_ports& p, credit_update_registers& host_
 
     if (!p.metadata_input.empty() && !_decisions.full()) {
         metadata m = p.metadata_input.read();
-        ring_id_t ring_id = contexts.find_ring(m.ikernel_id);
+        passthrough_context& c = contexts[m.ikernel_id];
         bool backpressure = false;
         // CR Mode
-        if (ring_id != 0) {
-            backpressure = !can_transmit(p, m.ikernel_id, ring_id, m.length, HOST);
+        if (c.ring_id != 0) {
+            backpressure = !c.ignore_credits && !can_transmit(p, m.ikernel_id, c.ring_id, m.length, HOST);
 
             if (!backpressure) {
-                new_message(ring_id, HOST);
-                m.ring_id = ring_id;
+                new_message(c.ring_id, HOST);
+                m.ring_id = c.ring_id;
                 custom_ring_metadata cr;
                 cr.end_of_message = 1;
                 m.var = cr;
@@ -111,7 +111,7 @@ stream:
 void passthrough::step(ports& p) {
 #pragma HLS inline
     pass_packets(p.host);
-    intercept_in(p.net, p.host_credit_regs);
+    intercept_in(p.net);
     drop_or_pass(p.net);
 }
 
@@ -136,11 +136,6 @@ int passthrough::reg_read(int address, int* value, ikernel_id_t ikernel_id)
     return contexts.rpc(address, value, ikernel_id, true);
 }
 
-ring_id_t passthrough_contexts::find_ring(const ikernel_id_t& id)
-{
-    return (*this)[id].ring_id;
-}
-
 int passthrough_contexts::rpc(int address, int *v, ikernel_id_t ikernel_id, bool read)
 {
 #pragma HLS inline
@@ -149,6 +144,8 @@ int passthrough_contexts::rpc(int address, int *v, ikernel_id_t ikernel_id, bool
     switch (address) {
         case PASSTHROUGH_RING_ID:
             return gateway_access_field<ring_id_t, &passthrough_context::ring_id>(index, v, read);
+        case PASSTHROUGH_IGNORE_CREDITS:
+            return gateway_access_field<bool, &passthrough_context::ignore_credits>(index, v, read);
         default:
             if (read)
                 *v = -1;

@@ -69,7 +69,7 @@ public:
 protected:
     threshold_contexts contexts;
 
-    void net_ingress(hls_ik::pipeline_ports& p, hls_ik::credit_update_registers& host_credit_regs);
+    void net_ingress(hls_ik::pipeline_ports& p);
     void parser();
     void egress(hls_ik::pipeline_ports& p);
 

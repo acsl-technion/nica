@@ -206,7 +206,7 @@ void memcached::drop_or_pass(hls_ik::pipeline_ports& in) {
 
 }
 
-void memcached::action_resolution(hls_ik::pipeline_ports& in, hls_ik::credit_update_registers& host_credit_regs) {
+void memcached::action_resolution(hls_ik::pipeline_ports& in) {
 #pragma HLS pipeline enable_flush ii=4
     _action_stream.empty_progress();
     update_stats();
@@ -539,7 +539,7 @@ void memcached::step(hls_ik::ports& p)
     _raw_dup.dup2(p.net.data_input, _parser_data, _buffer_data);
     _metadata_dup.dup2(p.net.metadata_input, _parser_metadata, _buffer_metadata);
     drop_or_pass(p.net);
-    action_resolution(p.net, p.host_credit_regs);
+    action_resolution(p.net);
     handle_parsed_packet(p.mem, p.events, p.host);
     parse_packet(p.events);
     reply_cached_value(p.host);

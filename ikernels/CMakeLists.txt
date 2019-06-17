@@ -50,9 +50,9 @@ add_ikernel(memcached "hls/memcached.cpp;hls/passthrough.cpp" "hls/tests/memcach
          "memcached-requests.pcap;memcached-responses.pcap;memcached-all-responses.pcap;memcached-requests-16.pcap;memcached-responses-16.pcap;memcached-all-responses-16.pcap")
 set(MEMCACHED_CACHE_SIZE "4096" CACHE STRING
     "Cache size in entries for the memcached ikernel")
-set(MEMCACHED_KEY_SIZE "10" CACHE STRING
+set(MEMCACHED_KEY_SIZE "16" CACHE STRING
         "Key size in bytes for the memcached ikernel")
-set(MEMCACHED_VALUE_SIZE "10" CACHE STRING
+set(MEMCACHED_VALUE_SIZE "16" CACHE STRING
         "Value size in bytes for the memcached ikernel")
 foreach(memcached_target memcached_tests memcached-emu)
 	target_compile_definitions(${memcached_target} PUBLIC -DMEMCACHED_CACHE_SIZE=${MEMCACHED_CACHE_SIZE}

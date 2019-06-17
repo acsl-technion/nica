@@ -84,7 +84,7 @@ int threshold_contexts::rpc(int address, int *v, ikernel_id_t ikernel_id, bool r
     return GW_DONE;
 }
 
-void threshold::net_ingress(hls_ik::pipeline_ports& p, credit_update_registers& host_credit_regs)
+void threshold::net_ingress(hls_ik::pipeline_ports& p)
 {
 #pragma HLS pipeline enable_flush ii=3
     if (contexts.update())
@@ -203,7 +203,7 @@ void threshold::step(hls_ik::ports& p)
     pass_packets(p.host);
     hls_helpers::dup(p.net.data_input, data_dup_to_parser, data_dup_to_egress);
     parser();
-    net_ingress(p.net, p.host_credit_regs);
+    net_ingress(p.net);
     egress(p.net);
 }
 

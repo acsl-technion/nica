@@ -52,7 +52,8 @@ private:
     /* Metadata of the current packet */
     hls_ik::metadata metadata;
 
-    bool dummy;
+    bool dummy, dummy_cache;
+    hls::stream<bool> dummy_update;
 
     /* By default, respond to all packets. When true, respond to sockperf
      * packets with "pong" requests. */

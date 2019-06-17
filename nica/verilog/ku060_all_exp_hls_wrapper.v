@@ -1321,7 +1321,7 @@ endgenerate
 	  axilite_write_ddrwrtable <= 1'b0;
 //	  axilite_write_ddrrdtable <= 1'b0;
 	  axilite_write_timeout <= 1'b0;
-	  axilite_write_timeout_counter <= 32'b0;;
+	  axilite_write_timeout_counter <= 32'b0;
 	end
 
 // Clear all read_select signals if a read from either of the slaves is on going and RVALID & RREADY.
@@ -1333,7 +1333,7 @@ endgenerate
 	  axilite_read_ik2 <= 1'b0;
 	  axilite_read_sigmon <= 1'b0;
 	  axilite_read_timeout <= 1'b0;
-	  axilite_read_timeout_counter <= 32'b0;;
+	  axilite_read_timeout_counter <= 32'b0;
 	end
       
     end
