@@ -14,10 +14,11 @@ import errno
 import glob
 import argparse
 import logging
-from interval import interval, inf
-
+import traceback
 from abc import ABC, abstractmethod
 from enum import IntEnum
+
+from interval import interval, inf
 
 import netifaces
 from idpool import IDPool
@@ -101,15 +102,16 @@ class Netdev(ABC):
         for ikernel in self.ikernels.values():
             ikernel.destroy()
 
-    def ik_create(self, uuid, log_dram_size = 0):
+    def ik_create(self, uuid, log_dram_size=0, traffic_class=None):
         '''Allocate an ikernel instance and register it.'''
         try:
             ikernel = Ikernel(self)
-            self.allocate_ikernel(uuid, ikernel, log_dram_size)
+            self.allocate_ikernel(uuid, ikernel, log_dram_size, traffic_class)
             self.ikernels[ikernel.ikernel_id] = ikernel
             return ikernel
 
         except IndexError:
+            traceback.print_exc()
             logging.error('Unknown UUID requested')
             raise exception(errno.ENOENT)
 
@@ -126,7 +128,7 @@ class Netdev(ABC):
             return (errno.ENOENT, )
 
     @abstractmethod
-    def allocate_ikernel(self, uuid, ikernel):
+    def allocate_ikernel(self, uuid, ikernel, log_dram_size, traffic_class):
         '''Allocate an ikernel instance.'''
         pass
 
@@ -202,6 +204,7 @@ class NetdevHardware(Netdev):
 
         super().__init__(ifname)
 
+        logging.info('FPGA build number: {}\n'.format(self.nica.axi_read(0x900024) >> 16))
         self.nica.enable()
         self.nica.n2h_flow_table.set_flow_table_mask(
             daddr=True, dport=True, saddr=False, sport=False)
@@ -231,18 +234,30 @@ class NetdevHardware(Netdev):
 
         self.nica.disable()
 
-    def allocate_ikernel(self, uuid, ikernel, log_dram_size):
+    def allocate_ikernel(self, uuid, ikernel, log_dram_size, traffic_class):
         try:
             ikernel.ikernel_index = self.uuids.index(uuid)
-            ikernel.ikernel_id = self.ikernel_ids.get_id()
-            ikernel.base, ikernel.log_dram_size = self.allocate_dram(log_dram_size)
-            logging.debug('Setting DDR mapping 0x%x for ikernel %d, %d bytes', ikernel.base, ikernel.ikernel_id, 1 << ikernel.log_dram_size)
-            print(type(ikernel.base))
-            self.nica.mmu.set_mapping(ikernel.ikernel_id, ikernel.base)
-            return ikernel
         except ValueError:
             logging.error('Unknown UUID requested')
             raise exception(errno.ENOENT)
+
+        condition = lambda _id: True
+        if traffic_class is not None:
+            if traffic_class == 0:
+                condition = lambda _id: (_id & 3) == 0 or (_id & 3) == 3
+            else:
+                condition = lambda _id: (_id & 3) == traffic_class
+        ikernel.ikernel_id = self.ikernel_ids.get_id(condition)
+
+        ikernel.base, ikernel.log_dram_size = self.allocate_dram(log_dram_size)
+        logging.debug('Setting DDR mapping 0x%x for ikernel %d, %d bytes', ikernel.base, ikernel.ikernel_id, 1 << ikernel.log_dram_size)
+        self.nica.mmu.set_mapping(ikernel.ikernel_id, ikernel.base)
+
+        if UUIDS.get(uuid, '') == 'memcached':
+            logging.debug('Setting log_dram_size in ikernel %d to %d',
+                          ikernel.ikernel_id, log_dram_size - 6)
+            self.nica.ikernel0.write(0, log_dram_size - 6, ikernel.ikernel_id)
+        return ikernel
 
     def allocate_dram(self, log_size):
         if log_size == 0:
@@ -254,7 +269,8 @@ class NetdevHardware(Netdev):
         for base, end in self.free_list:
             size = end - base
             if size >= req_size:
-                self.free_list = self.free_list & interval[-inf, base] & interval[base + req_size, inf]
+                self.free_list = self.free_list & (interval[-inf, base] | interval[base + req_size, inf])
+                logging.debug('Found base: 0x%x. Resulting free_list: %s', base, self.free_list)
                 return int(base), log_size
         logging.warning('Out of memory for ikernel. Requested 2 ** {} bytes'.format(log_size))
         raise exception(errno.ENOMEM)
@@ -383,11 +399,11 @@ class RPC(object):
         logging.debug('Received header {}'.format(self.hdr_to_str(hdr)))
         resp_opcode, length, _, status = hdr
         if length != struct_resp.size:
-            logging.debug('Error: got invalid response size {}, expected {}'.format(
+            logging.error('got invalid response size {}, expected {}'.format(
                 length, struct_resp.size))
             raise exception(errno.EINVAL)
         if resp_opcode != opcode:
-            logging.error('Error: got unexpected opcode {}, expected {}'.format(resp_opcode, opcode))
+            logging.error('got unexpected opcode {}, expected {}'.format(resp_opcode, opcode))
             raise exception(errno.EINVAL)
 
         if status:
@@ -454,7 +470,8 @@ class NetdevParavirt(Netdev, RPC):
     def shutdown(self):
         super(NetdevParavirt, self).shutdown()
 
-    def allocate_ikernel(self, uuid, ikernel, log_dram_size):
+    def allocate_ikernel(self, uuid, ikernel, log_dram_size, traffic_class):
+        logging.debug('Requesting hypervisor to allocate ikernel of UUID=%s', str(uuid))
         ikernel.ikernel_id, = self.invoke(HypervisorOpcodes.ALLOCATE_IKERNEL,
                                           Struct('16sI'), (uuid.bytes, log_dram_size),
                                           Struct('I'))
@@ -505,6 +522,19 @@ def default_mst_device():
 MST_DEVICE = default_mst_device()
 VIRTIO_DEVICE = '/dev/virtio-ports/nica'
 
+NUM_TC = 3
+
+def vm_tc(argument):
+    '''Convert command line argument of a VM-TC pair'''
+    try:
+        vm_name, traffic_class = argument.split(',')
+        traffic_class = int(traffic_class)
+        if traffic_class < 0 or traffic_class >= NUM_TC:
+            raise argparse.ArgumentTypeError('Invalid TC: {}'.format(traffic_class))
+        return vm_name, traffic_class
+    except:
+        raise argparse.ArgumentTypeError('Use "<vm name>,<TC number>"')
+
 def parse_args():
     '''Parse command line arguments.'''
     parser = argparse.ArgumentParser(description='Manages NICA.')
@@ -512,6 +542,7 @@ def parse_args():
                         help='MST device to use (default: {})'.format(MST_DEVICE))
     parser.add_argument('-v', metavar='DEVICE', dest='vdevice', default=VIRTIO_DEVICE,
                         help='virtio-serial device to use (default: {})'.format(VIRTIO_DEVICE))
+    parser.add_argument('--tc-map', metavar='VM,TC', dest='tc_map', type=vm_tc, nargs='+')
     return parser.parse_args()
 
 def init_nica():
@@ -520,22 +551,28 @@ def init_nica():
     # TODO support multiple mlx netdevs
     mlx_netdevs = [dev for path in glob.glob('/sys/bus/pci/drivers/mlx5_core/*/net')
                    for dev in os.listdir(path)]
+    cur_dir = os.path.dirname(__file__)
     if os.path.exists(args.device):
         # Setup custom ring
         # TODO embed the scripts here
-        cur_dir = os.path.dirname(__file__)
         os.system(os.path.join(cur_dir, '../scripts/custom-ring-setup.sh'))
         os.system(os.path.join(cur_dir, '../scripts/disable-mellanox-shell-credits.sh'))
         nica = NetdevHardware(mlx_netdevs[0], args.device)
     else:
         logging.info('No hardware device found. Attempt using paravirt.')
         nica = NetdevParavirt(mlx_netdevs[0], args.vdevice)
+        os.system(os.path.join(cur_dir, '../scripts/custom-ring-setup.sh'))
 
     nica.initialize()
-    return nica
+
+    if args.tc_map:
+        tc_map = dict(args.tc_map)
+    else:
+        tc_map = {}
+    return nica, tc_map
 
 # global NICA - TODO support multiple netdevs
-NICA = init_nica()
+NICA, TC_MAP = init_nica()
 
 class Ikernel(object):
     '''Designate an ikernel instance allocated to the client.'''
@@ -600,6 +637,9 @@ def rpc(opcode, req, resp=EMPTY_STRUCT):
 
             try:
                 resp_tuple = func(self, *unpacked)
+            except TimeoutError as exc:
+                logging.warning('Timeout exception: {}'.format(exc))
+                resp_tuple = (errno.ETIMEDOUT,)
             except OSError as exc:
                 logging.warning('Exception: {}'.format(exc))
                 resp_tuple = (int(exc.errno),)
@@ -631,8 +671,8 @@ class NICAManagerProtocolBase(asyncio.Protocol, RPC):
         self.custom_ring_ikernels = {}
 
     def connection_made(self, transport):
-        peername = transport.get_extra_info('peername')
-        logging.info('Connection with {}'.format(peername))
+        self.peername = transport.get_extra_info('peername')
+        logging.info('Connection with {}'.format(self.peername))
         self.transport = transport
         self.socket = transport.get_extra_info('socket')
 
@@ -833,6 +873,16 @@ class NICAManagerHypervisorProtocol(NICAManagerProtocolBase):
         # TODO use to configure custom ring with per-ring MAC/IP
         self.custom_ring_mac = bytes(6)
         self.custom_ring_ip = 0
+        self.vm_name = 'unknown VM'
+        self.traffic_class = None
+
+    def connection_made(self, transport):
+        super(NICAManagerHypervisorProtocol, self).connection_made(transport)
+        if self.peername:
+            dirname = os.path.dirname(self.peername)
+            self.vm_name = os.path.basename(dirname).split('-')[-1]
+            self.traffic_class = TC_MAP.get(self.vm_name, None)
+        logging.info('Connected to VM: %s (TC=%s)', self.vm_name, self.traffic_class)
 
     @rpc(HypervisorOpcodes.CONFIG_CUSTOM_RING, Struct('6sI'))
     def configure_custom_ring(self, mac, ip_addr):
@@ -861,7 +911,8 @@ class NICAManagerHypervisorProtocol(NICAManagerProtocolBase):
     def allocate_ikernel(self, uuid_bytes, log_dram_size):
         '''Allocate an ikernel instance.'''
         uuid = UUID(bytes=uuid_bytes)
-        ikernel = NICA.ik_create(uuid, log_dram_size)
+        logging.debug('%s: request for ikernel of UUID=%s', self.vm_name, str(uuid))
+        ikernel = NICA.ik_create(uuid, log_dram_size, self.traffic_class)
         ikernel_id = ikernel.ikernel_id
         self.ikernels.add(ikernel_id)
         logging.info('Got ikernel ID {}'.format(ikernel_id))

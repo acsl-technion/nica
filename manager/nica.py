@@ -9,9 +9,13 @@ import os
 import socket
 import fcntl
 import logging
+import glob
 from ipaddress import ip_address
 from uuid import UUID
 from abc import ABC, abstractmethod
+from time import clock
+
+TIMEOUT=5 # seconds
 
 class Gateway(object):
     '''Wrap a hardware RPC gateway.'''
@@ -34,27 +38,37 @@ class Gateway(object):
             self.nica.axi_write(self.ikernel_id, ikernel_id, delay=delay)
         self.nica.axi_write(self.data_i, value, delay=10)
         self.nica.axi_write(self.cmd, address | self.cmd_write | self.cmd_go, delay=self.cmd_delay)
-        while True:
+        start = clock()
+        while clock() - start <= TIMEOUT:
             ret = self.nica.axi_read(self.done, delay=self.done_delay)
             if ret is None or ret:
                 break
+        if ret == 0:
+            raise TimeoutError()
         self.nica.axi_write(self.cmd, 0, delay=self.cmd_delay)
+        start = clock()
         while self.nica.axi_read(self.done, delay=self.done_delay):
-            pass
+            if clock() - start > TIMEOUT:
+                raise TimeoutError()
 
     def read(self, address, ikernel_id=None, delay=None):
         '''Read a value from the gateway.'''
         if ikernel_id is not None:
             self.nica.axi_write(self.ikernel_id, ikernel_id, delay=delay)
         self.nica.axi_write(self.cmd, address | self.cmd_go, delay=10)
-        while True:
+        start = clock()
+        while clock() - start <= TIMEOUT:
             ret = self.nica.axi_read(self.done, delay=self.done_delay)
             if ret is None or ret:
                 break
+        if ret == 0:
+            raise TimeoutError()
         ret = self.nica.axi_read(self.data_o, delay=self.cmd_delay)
         self.nica.axi_write(self.cmd, 0, delay=self.cmd_delay)
+        start = clock()
         while self.nica.axi_read(self.done, delay=self.done_delay):
-            pass
+            if clock() - start > TIMEOUT:
+                raise TimeoutError()
         return ret
 
 class Arbiter(Gateway):
@@ -95,7 +109,10 @@ class MMU(object):
         # Page aligned
         assert ddr_address & ((1 << 12) - 1) == 0
 
-        self.nica.axi_write(self.BASE + 4 * ikernel_id, ddr_address >> 12, delay=delay)
+        addr = ddr_address >> 12
+        logging.debug('set_mapping(AXI-lite address 0x%x, base=0x%x)',
+                      self.BASE + 4 * ikernel_id, addr)
+        self.nica.axi_write(self.BASE + 4 * ikernel_id, addr, delay=delay)
 
 class NICA(ABC):
     '''NICA's main control object. This is an abstract class derived by the simulation version and
@@ -109,16 +126,17 @@ class NICA(ABC):
         self.h2n_arbiter = Arbiter(self, 0x458)
         self.custom_ring = CustomRing(self, 0x78)
         self.mmu = MMU(self)
+        self.axi_cache = {}
 
     @abstractmethod
     def axi_read(self, address, delay=None):
         '''Read a value from AXI4-Lite.'''
-        pass
+        return self.axi_cache.get(address, None)
 
     @abstractmethod
     def axi_write(self, address, value, delay=None):
         '''Write a value to AXI4-Lite.'''
-        pass
+        self.axi_cache[address] = value
 
     def get_uuid(self, ikernel=0):
         '''Read the UUID of a given ikernel index.'''
@@ -173,11 +191,13 @@ class NicaSimulation(NICA):
         '''Write a value to AXI4-Lite.'''
         print("%d: 0 %x %x\n" % (delay, address, value))
         self.total_delay += delay
+        return super(NicaSimulation, self).axi_write(address, value, delay=delay)
 
     def axi_read(self, address, delay=None):
         '''Read a value from AXI4-Lite.'''
         print("%d: 1 %x\n" % (delay, address))
         self.total_delay += delay
+        return super(NicaSimulation, self).axi_read(address, delay=delay)
 
 def ioctl_ioc(ioctl_dir, ioctl_type, ioctl_nr, size):
     '''Calculate ioctl number.'''
@@ -341,6 +361,15 @@ class NicaHardware(NICA):
 
     def axi_write(self, address, value, delay=None):
         os.pwrite(self.fpga_fd, self.int_struct.pack(value), address)
+        return super(NicaHardware, self).axi_write(address, value, delay=delay)
 
     def axi_read(self, address, delay=None):
         return self.int_struct.unpack(os.pread(self.fpga_fd, 4, address))[0]
+
+def default_mst_device():
+    '''Find the available MST device for the FPGA, or provide the default.'''
+    options = glob.glob('/dev/mst/*_fpga_rdma')
+
+    if options:
+        return options[0]
+    return '/dev/mst/mt4117_pciconf0_fpga_rdma'

@@ -26,8 +26,8 @@
 #include "StatisticsUdpServer.hpp"
 #include "RunnableServerBase.hpp"
 #include "threshold.hpp"
-#include <vma/vma_extra.h>
 #include <future>
+#include <uuid.h>
 
 class threshold_main : public RunnableServerBase {
 public:

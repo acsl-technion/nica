@@ -55,28 +55,9 @@ echo h2n_ik0_passthrough: $passthrough
 echo h2n_ik0_drop: $drop
 echo h2n_ik0_generated: $generated
 echo
-for ik in $(seq 0 5) ; do
-        echo ikernel $ik
-	let memcached_get_requests=$(. register.sh 0x1014 r 0x10 $ik)
-	let memcached_get_requests_hits=$(. register.sh 0x1014 r 0x11 $ik)
-	let memcached_get_requests_misses=$(. register.sh 0x1014 r 0x12 $ik)
-	let memcached_set_requests=$(. register.sh 0x1014 r 0x13 $ik)
-	let memcached_n2h_unknown=$(. register.sh 0x1014 r 0x14 $ik)
-	let memcached_get_responses=$(. register.sh 0x1014 r 0x15 $ik)
-	let memcached_h2n_unknown=$(. register.sh 0x1014 r 0x16 $ik)
-	let memcached_dropped_backpressure=$(. register.sh 0x1014 r 0x17 $ik)
+ikernels=$(seq 0 5)
+sudo ../manager/memcachedctl.py status -i $ikernels
+for ik in $ikernels ; do
 	let memcached_ring_id=$(. register.sh 0x1014 r 0x18 $ik)
-	echo MEMCACHED_STATS_GET_REQUESTS: $memcached_get_requests
-	echo MEMCACHED_STATS_GET_REQUESTS_HITS: $memcached_get_requests_hits
-	echo MEMCACHED_STATS_GET_REQUESTS_MISSES: $memcached_get_requests_misses
-	echo MEMCACHED_STATS_GET_RESPONSES: $memcached_get_responses
-	echo
-	echo MEMCACHED_STATS_SET_REQUESTS: $memcached_set_requests
-	echo
-	echo MEMCACHED_STATS_N2H_UNKNOWN: $memcached_n2h_unknown
-	echo MEMCACHED_STATS_H2N_UNKNOWN: $memcached_h2n_unknown
-	echo MEMCACHED_DROPPED_BACKPRESSURE $memcached_dropped_backpressure
-	echo
 	echo MEMCACHED_RING_ID $memcached_ring_id
-	echo
 done

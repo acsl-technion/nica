@@ -6,19 +6,10 @@ nicactl - CLI to control NICA properties
 
 import argparse
 import os
-import glob
 import sys
-from nica import NicaHardware
+from nica import NicaHardware, default_mst_device
 
 # TODO control through NICA manager
-
-def default_mst_device():
-    '''Find the available MST device for the FPGA, or provide the default.'''
-    options = glob.glob('/dev/mst/*_fpga_rdma')
-
-    if options:
-        return options[0]
-    return '/dev/mst/mt4117_pciconf0_fpga_rdma'
 
 MST_DEVICE = default_mst_device()
 
@@ -36,7 +27,6 @@ def init_nica():
     '''Initialize a Netdev object for the expected one underlying card.'''
     args = PARSER.parse_args(sys.argv[1:2])
     if os.path.exists(args.device):
-        # Setup custom ring
         nica = NicaHardware(args.device)
 
     return nica, args

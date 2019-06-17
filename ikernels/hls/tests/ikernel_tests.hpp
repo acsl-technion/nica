@@ -31,7 +31,9 @@
 #include <functional>
 #include "nica-top.hpp"
 
-typedef void (* top_function)(hls_ik::ports &, hls_ik::ikernel_id &, hls_ik::virt_gateway_registers&);
+typedef void (* top_function)(hls_ik::ports &, hls_ik::ikernel_id &,
+                              hls_ik::virt_gateway_registers&,
+                              hls_ik::tc_ikernel_data_counts&);
 
 class gateway_wrapper {
 public:
@@ -152,6 +154,28 @@ private:
     std::list<int> flows;
 };
 
+template <size_t _interface_width>
+struct memory_model {
+    enum {
+        array_size = 1ull << (_interface_width - 6),
+    };
+    ap_uint<512> _array[array_size];
+
+    void mem(hls_ik::memory_t& m)
+    {
+        if (!m.aw.empty() && !m.w.empty()) {
+            // TODO bursts
+            _array[m.aw.read()] = m.w.read();
+            m.b.write(true);
+        }
+
+        if (!m.ar.empty()) {
+            // TODO bursts
+            m.r.write(_array[m.ar.read()]);
+        }
+    }
+};
+
 class ikernel_test :
     public ::testing::TestWithParam<top_function> {
 protected:
@@ -160,19 +184,22 @@ protected:
 #define BOOST_PP_LOCAL_LIMITS (0, NUM_IKERNELS - 1)
 %:include BOOST_PP_LOCAL_ITERATE()
     hls_ik::ports& p;
+    hls_ik::tc_ikernel_data_counts tc;
     hls_ik::ikernel_id id;
     hls_ik::virt_gateway_registers gateway;
     int top_call_count;
     int default_retries;
+    memory_model<DDR_INTERFACE_WIDTH> mem;
 
     void top() {
-        GetParam()(p, id, gateway);
+        GetParam()(p, id, gateway, tc);
+        mem.mem(p.mem);
         ++top_call_count;
     }
 
     explicit ikernel_test(int default_retries = 1) : p(ports0),
         top_call_count(), default_retries(default_retries) {
-        init(p);
+        init(tc);
     }
 
     virtual ~ikernel_test() {

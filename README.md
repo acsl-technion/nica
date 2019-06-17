@@ -43,34 +43,22 @@ It is also possible to build NICA building the `nica` target, and run an RTL/C
 co-simulation for that project by building the `nica-sim` target. Other
 ikernel targets are listed below.
 
-| ikernel     | target        | RTL/C co-simulation |
-| ----------- | ------------- | -----------------   |
-| Passthrough | `passthrough` | `passthrough-sim`   |
-| Threshold   | `threshold`   | `threshold-sim`     |
-| pktgen      | `pktgen`      | `pktgen-sim`        |
-| echo        | `echo`        | `echo-sim`          |
-| Top-K       | `cms`         | `cms-sim`           |
-| memcached   | `memcached`   | `memcached-sim`     |
+| ikernel     | target            | RTL/C co-simulation |
+| ----------- | ----------------- | -----------------   |
+| Passthrough | `passthrough-hls` | `passthrough-sim`   |
+| Threshold   | `threshold-hls`   | `threshold-sim`     |
+| pktgen      | `pktgen-hls`      | `pktgen-sim`        |
+| echo        | `echo-hls`        | `echo-sim`          |
+| Top-K       | `cms-hls`         | `cms-sim`           |
+| memcached   | `memcached-hls`   | `memcached-sim`     |
 
 ## Building host software
-
-The host software depends on `libnica`, which is part of a modified
-[libvma](https://bitbucket.org/haggai_e/libvma.git) repository:
-
-```shell
-cd ~/workspace
-git clone git@bitbucket.org:haggai_e/libvma.git
-ACLOCAL_PATH=/usr/share/aclocal ./autogen.sh
-./configure IKERNEL_PATH=~/workspace/nica/nica/hls
-make -j
-```
 
 Now this repository can be configured to build the software as well:
 
 ```shell
 cd ~/workspace/nica/build
-cmake -DGTEST_ROOT=~/workspace/googletest/googletest -DNUM_IKERNELS=1 -DBUILD_SOFTWARE=ON \
-    -DNICA_DIR=~/workspace/libvma/src/nica -DVMA_DIR=~/workspace/libvma/src ..
+cmake -DGTEST_ROOT=~/workspace/googletest/googletest -DNUM_IKERNELS=1 -DBUILD_SOFTWARE=ON ..
 make -j
 ```
 

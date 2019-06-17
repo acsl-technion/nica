@@ -90,7 +90,7 @@ namespace {
         ap_uint<32> dropped_packets_num = 0;
 
         const int total = 100;
-        int passed = 0;
+        unsigned passed = 0;
 
         for (int i = 0; i < total; ++i) {
             p.net.metadata_input.write(m);
@@ -158,7 +158,7 @@ namespace {
         ap_uint<32> dropped_packets_num = 0;
 
         const int total = 100;
-        int passed = 0;
+        unsigned passed = 0;
         update_credits(1, total);
 
         for (int i = 0; i < total; ++i) {

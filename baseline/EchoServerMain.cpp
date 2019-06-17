@@ -27,7 +27,7 @@
 #include "RunnableServerBase.hpp"
 #include "passthrough.hpp"
 #include "echo.hpp"
-#include <vma/vma_extra.h>
+#include <uuid.h>
 
 #include <future>
 

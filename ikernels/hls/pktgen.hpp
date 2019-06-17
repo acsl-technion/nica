@@ -67,7 +67,7 @@ class pktgen : public hls_ik::ikernel, public hls_ik::virt_gateway_impl<pktgen> 
 public:
     pktgen();
 
-    void step(hls_ik::ports& p);
+    virtual void step(hls_ik::ports& ports, hls_ik::tc_ikernel_data_counts& tc);
 
     int reg_write(int address, int value, hls_ik::ikernel_id_t ikernel_id);
     int reg_read(int address, int* value, hls_ik::ikernel_id_t ikernel_id);
@@ -75,9 +75,9 @@ public:
 private:
     scheduler<LOG_NUM_IKERNELS> sched;
 
-    void data_plane(hls_ik::pipeline_ports& p);
+    void data_plane(hls_ik::pipeline_ports& p, hls_ik::tc_pipeline_data_counts& tc);
     void sched_wrapper();
-    void check_quantum_complete(hls_ik::pipeline_ports& p);
+    void check_quantum_complete(hls_ik::pipeline_ports& p, hls_ik::tc_pipeline_data_counts& tc);
 
     enum { IDLE, INPUT_PACKET, DUPLICATE } state;
     /** The metadata for newly incoming packet */

@@ -74,7 +74,7 @@
 //                           Default trigger position = 0: Sampling window begins after trigger occurrence
 //    sigmon_ctrl1[15:12]  - Reserved  
 //    sigmon_ctrl1[23:16]  - Trigger source. Select either of the input events/sampled signals
-//                           Default: 0x3f, selecting SIGMON_ENABLED event (start monitoring immediately after enabling sigmon)
+//                           Default: 0xff, selecting SIGMON_ENABLED event (start monitoring immediately after enabling sigmon)
 //    sigmon_ctrl1[30:24]  - Reserved  
 //    sigmon_ctrl1[31]     - sigmon enable. Enables signals monitoring
 //                           Upon assertion, the sigmon_fifo and free running counter are cleared.
@@ -417,7 +417,7 @@
 //// sigmon_ctrl6: Configuring both event_count0 and event_count1.
 //
 //// Configuring event_counter0 to count h200 clocks from signals monitoring enabled (asserting sigmon_ctrl1[31]):
-//// The count_enable input is selected as SIGMON_ENABLED (x3f), to turn on the counter enable right from the start.
+//// The count_enable input is selected as SIGMON_ENABLED (xff), to turn on the counter enable right from the start.
 //// The count_event input is set to constant 'high' (EVENT_TRUE, x01).
 //// Once this counter hits its limit, is asserts the event LOCAL_EVENT0 (used below to enable event_count1)
 //
@@ -1188,7 +1188,7 @@ end
 // writing to sigmon contrl registers
 always @(posedge clk) begin
   if (reset) begin
-    sigmon_ctrl1 <= 32'h3f0000; // Trigger source: SIGMON_ENABLED, trigger position: 0
+    sigmon_ctrl1 <= 32'hff0000; // Trigger source: SIGMON_ENABLED, trigger position: 0
 
 // Setting default selection of monitored signals: All events are disabled
     sigmon_ctrl2 <= 32'b0;
@@ -2175,6 +2175,18 @@ end
  .got_ddrwdone(got_ddrwdone),
  .got_ddrraddr(got_ddrraddr),
  .got_ddrrdata(got_ddrrdata),
+ .axi4mm_aw_rdy(axi4mm_aw_rdy),
+ .axi4mm_aw_vld(axi4mm_aw_vld),
+ .axi4mm_w_rdy(axi4mm_w_rdy),
+ .axi4mm_w_vld(axi4mm_w_vld),
+ .axi4mm_w_last(axi4mm_w_last),
+ .axi4mm_b_rdy(axi4mm_b_rdy),
+ .axi4mm_b_vld(axi4mm_b_vld),
+ .axi4mm_ar_rdy(axi4mm_ar_rdy),
+ .axi4mm_ar_vld(axi4mm_ar_vld),
+ .axi4mm_r_rdy(axi4mm_r_rdy),
+ .axi4mm_r_vld(axi4mm_r_vld),
+ .axi4mm_r_last(axi4mm_r_last),
  .dram_test_enabled(dram_test_enabled),
  .nica_events(nica_events),
  .count_events(count_events),

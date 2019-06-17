@@ -1,18 +1,15 @@
 #!/bin/bash
 #[input]: unicast/broadcast cores 
 
-if [ $# -lt 2 ]; then
-        echo "Usage: ./get_throughput.sh password [broadcast/unicast]"
+if [ $# -lt 3 ]; then
+        echo "Usage: ./get_throughput.sh password [broadcast/unicast] packet_size"
         exit 1
 fi
 
-password=$1
+password=$1 ;shift
 cores=12
-if [ $# -eq 2 ] ; then
-	cores=$2
-fi
-
-mode=$1
+mode=$1;shift
+packet_size=$1
 mac_addr="ff:ff:ff:ff:ff:ff"
 
 if [ $mode == unicast ] ; then

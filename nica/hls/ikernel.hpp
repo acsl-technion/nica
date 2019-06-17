@@ -263,9 +263,14 @@ struct pipeline_ports {
 
     metadata_stream metadata_output;
     data_stream data_output;
+};
 
-    tc_ports_data_counts tc_meta_counts;
-    tc_ports_data_counts tc_data_counts;
+struct tc_pipeline_data_counts {
+    tc_ports_data_counts tc_meta_counts, tc_data_counts;
+};
+
+struct tc_ikernel_data_counts {
+    tc_pipeline_data_counts host, net;
 };
 
 typedef ap_uint<16> msn_t;
@@ -300,12 +305,60 @@ class memory {
 public:
     enum {
         interface_width = _interface_width,
-        array_size = 1ull << (interface_width - 6),
     };
-    ap_uint<512> mem[array_size];
+    typedef ap_uint<512> value_t;
+    typedef ap_uint<interface_width - 6> index_t;
+
+    /* TODO pass other auxilary signals */
+
+    hls::stream<index_t> ar;
+    hls::stream<value_t> r;
+    hls::stream<index_t> aw;
+    hls::stream<value_t> w;
+    hls::stream<bool> b;
+
+    void write(index_t index, value_t value)
+    {
+#pragma HLS inline
+        aw.write(index);
+        w.write(value);
+    }
+
+    void post_read(index_t index)
+    {
+#pragma HLS inline
+        ar.write(index);
+    }
+
+    bool has_write_response()
+    {
+#pragma HLS inline
+        return !b.empty();
+    }
+
+    bool get_write_response()
+    {
+#pragma HLS inline
+        return b.read();
+    }
+
+    bool has_read_response()
+    {
+#pragma HLS inline
+        return !r.empty();
+    }
+
+    value_t get_read_response()
+    {
+#pragma HLS inline
+        return r.read();
+    }
 };
 
 typedef memory<DDR_INTERFACE_WIDTH> memory_t;
+
+/* Convince HLS that memory_t is used, and set the right stream directions */
+void memory_unused(memory_t& m, hls::stream<bool>& dummy_update);
 
 #define IKERNEL_NUM_EVENTS 8
 typedef ap_uint<1> trace_event;
@@ -337,10 +390,10 @@ struct ikernel_ring_context
 
 class ikernel {
 public:
-    ikernel() {}
+    ikernel() : dummy_update("dummy_update") {}
     virtual ~ikernel() {}
 
-    virtual void step(ports& ports) = 0;
+    virtual void step(ports& ports, tc_ikernel_data_counts& tc) = 0;
 
     /* For simulation: accessor functions to AXI4-Lite registers. */
     virtual int reg_write(int address, int value, ikernel_id_t ikernel_id)
@@ -382,7 +435,7 @@ protected:
 
     /* Check whether a specific ikernel, ring, and direction (HOST / NET) is
      * allowed to transmit a data packet of a given length. */
-    bool can_transmit(pipeline_ports& p, ikernel_id_t id, ring_id_t ring, pkt_len_t len, direction_t dir);
+    bool can_transmit(tc_pipeline_data_counts& tc, ikernel_id_t id, ring_id_t ring, pkt_len_t len, direction_t dir);
 
     /* Call before transmitting a new message through the given custom ring ID
      * and direction. The number of calls to this function should match the number
@@ -396,6 +449,12 @@ protected:
      * case the new_message() method shouldn't be called on the same invocation
      */
     bool update();
+
+protected:
+    /* Dummy boolean to make it easier to define unused HLS stream direction. Pass it
+     * to produce/consume function to trick HLS into thinking they are used. */
+    hls::stream<bool> dummy_update;
+
 private:
     ikernel_ring_context host_credits[1 << CUSTOM_RINGS_LOG_NUM]; // TODO magic number
     hls::stream<credit_update_registers> credit_updates;
@@ -404,7 +463,7 @@ private:
 
 void pass_packets(pipeline_ports& p);
 
-void init(hls_ik::ports& p);
+void init(hls_ik::tc_ikernel_data_counts& tc);
 
 static inline void link_pipeline_sim(hls_ik::pipeline_ports& in, hls_ik::pipeline_ports& out)
 {
@@ -413,11 +472,16 @@ static inline void link_pipeline_sim(hls_ik::pipeline_ports& in, hls_ik::pipelin
     hls_helpers::link_axi_to_fifo(in.data_input, out.data_input);
     hls_helpers::link_axi_stream(out.metadata_output, in.metadata_output);
     hls_helpers::link_axi_stream(out.data_output, in.data_output);
+}
 
-    for (int i = 0; i < NUM_TC; ++i) {
-         out.tc_meta_counts[i] = in.tc_meta_counts[i];
-         out.tc_data_counts[i] = in.tc_data_counts[i];
-    }
+static inline void link_mem_sim(hls_ik::memory_t& in, hls_ik::memory_t& out)
+{
+#pragma HLS inline
+    hls_helpers::link_axi_stream(out.aw, in.aw);
+    hls_helpers::link_axi_stream(out.w, in.w);
+    hls_helpers::link_axi_stream(out.ar, in.ar);
+    hls_helpers::link_axi_to_fifo(in.b, out.b);
+    hls_helpers::link_axi_to_fifo(in.r, out.r);
 }
 
 static inline void link_ports_sim(hls_ik::ports& in, hls_ik::ports& out)
@@ -425,7 +489,7 @@ static inline void link_ports_sim(hls_ik::ports& in, hls_ik::ports& out)
 #pragma HLS inline
     link_pipeline_sim(in.host, out.host);
     link_pipeline_sim(in.net, out.net);
-    out.host_credit_regs = in.host_credit_regs;
+    link_mem_sim(in.mem, out.mem);
 }
 
 } // namespace
@@ -433,7 +497,8 @@ static inline void link_ports_sim(hls_ik::ports& in, hls_ik::ports& out)
 #define DECLARE_TOP_FUNCTION(__name) void __name(\
     hls_ik::ports& ik, \
     hls_ik::ikernel_id& uuid, \
-    hls_ik::virt_gateway_registers& gateway)
+    hls_ik::virt_gateway_registers& gateway, \
+    hls_ik::tc_ikernel_data_counts& tc)
 
 /* RTL/C co-simulation doesn't work well with certain definitions, so make them
  * conditional */
@@ -456,9 +521,15 @@ static inline void link_ports_sim(hls_ik::ports& in, hls_ik::ports& out)
     DO_PRAGMA(HLS interface axis port=__pipeline.metadata_input) \
     DO_PRAGMA(HLS interface axis port=__pipeline.metadata_output) \
     DO_PRAGMA(HLS interface axis port=__pipeline.data_input) \
-    DO_PRAGMA(HLS interface axis port=__pipeline.data_output) \
-    TC_COUNTS_PRAGMAS(__pipeline.tc_data_counts) \
-    TC_COUNTS_PRAGMAS(__pipeline.tc_meta_counts)
+    DO_PRAGMA(HLS interface axis port=__pipeline.data_output)
+
+#define IKERNEL_TC_PIPELINE_PRAGMAS(__tc_pipeline) \
+    TC_COUNTS_PRAGMAS(__tc_pipeline.tc_data_counts) \
+    TC_COUNTS_PRAGMAS(__tc_pipeline.tc_meta_counts)
+
+#define IKERNEL_TC_PORTS_PRAGMAS(__tc) \
+    IKERNEL_TC_PIPELINE_PRAGMAS(__tc.host) \
+    IKERNEL_TC_PIPELINE_PRAGMAS(__tc.net)
 
 #define IKERNEL_CREDIT_REGS_PRAGMAS(__credit_regs, __offset) \
     DO_PRAGMA_SYN(HLS data_pack variable=__credit_regs) \
@@ -468,8 +539,11 @@ static inline void link_ports_sim(hls_ik::ports& in, hls_ik::ports& out)
     IKERNEL_PIPELINE_PORTS_PRAGMAS(__ports.net) \
     IKERNEL_PIPELINE_PORTS_PRAGMAS(__ports.host) \
     IKERNEL_CREDIT_REGS_PRAGMAS(__ports.host_credit_regs, 0x1050) \
-    DO_PRAGMA_SYN(HLS interface m_axi port=__ports.mem.mem latency=33 depth=40 \
-        num_write_outstanding=40 num_read_outstanding=40) \
+    DO_PRAGMA_SYN(HLS interface axis port=__ports.mem.ar) \
+    DO_PRAGMA_SYN(HLS interface axis port=__ports.mem.r) \
+    DO_PRAGMA_SYN(HLS interface axis port=__ports.mem.aw) \
+    DO_PRAGMA_SYN(HLS interface axis port=__ports.mem.w) \
+    DO_PRAGMA_SYN(HLS interface axis port=__ports.mem.b) \
     DO_PRAGMA(HLS array_partition variable=__ports.events complete) \
     DO_PRAGMA(HLS interface ap_none port=__ports.events)
 
@@ -481,6 +555,7 @@ DECLARE_TOP_FUNCTION(__name) \
     _Pragma("HLS dataflow") \
     _Pragma("HLS ARRAY_RESHAPE variable=uuid.uuid complete dim=1") \
     IKERNEL_PORTS_PRAGMAS(ik) \
+    IKERNEL_TC_PORTS_PRAGMAS(tc) \
     /* TODO multiple kernels will need different AXI4-Lite offsets */ \
     _PragmaSyn("HLS interface s_axilite port=uuid offset=0x1000") \
     VIRT_GATEWAY_OFFSET(gateway, 0x1014, 0x101c, 0x102c, 0x1034) \
@@ -494,8 +569,8 @@ DECLARE_TOP_FUNCTION(__name) \
     DO_PRAGMA_SIM(HLS stream variable=ports_buf.net.data_input depth=256); \
     using namespace hls_ik; \
     static const ikernel_id __constant_uuid = { __uuid }; \
-    INSTANCE(__class).host_credits_update(IF_SIM(ports_buf, ik).host_credit_regs); \
-    INSTANCE(__class).step(IF_SIM(ports_buf, ik)); \
+    INSTANCE(__class).host_credits_update(ik.host_credit_regs); \
+    INSTANCE(__class).step(IF_SIM(ports_buf, ik), tc); \
     INSTANCE(__class).gateway(&INSTANCE(__class), gateway); \
     output_uuid: uuid = __constant_uuid; \
 }

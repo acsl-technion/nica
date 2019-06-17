@@ -30,19 +30,19 @@
 
 namespace hls_ik {
 
-    bool ikernel::can_transmit(pipeline_ports& p, ikernel_id_t id, ring_id_t ring, pkt_len_t len, direction_t dir)
+    bool ikernel::can_transmit(tc_pipeline_data_counts& tc, ikernel_id_t id, ring_id_t ring, pkt_len_t len, direction_t dir)
     {
 #pragma HLS inline
         if (dir == HOST && ring != 0 && !host_credits[ring - 1].can_transmit())
             return false;
 
-        const tc_ports_data_counts& meta = p.tc_meta_counts;
-        const tc_ports_data_counts& data = p.tc_data_counts;
+        const tc_ports_data_counts& meta = tc.tc_meta_counts;
+        const tc_ports_data_counts& data = tc.tc_data_counts;
         /* TODO store TC in context */
-        int tc = id & (NUM_TC - 1);
-        if (tc == NUM_TC - 1)
-            tc = 0;
-        if (meta[tc] > TC_META_THRESHOLD - 1 || data[tc] > TC_DATA_THRESHOLD - (len >> 5))
+        int traffic_class = id & (NUM_TC - 1);
+        if (traffic_class == NUM_TC - 1)
+            traffic_class = 0;
+        if (meta[traffic_class] > TC_META_THRESHOLD - 1 || data[traffic_class] > TC_DATA_THRESHOLD - (len >> 5))
             return false;
 
         return true;
@@ -104,13 +104,30 @@ namespace hls_ik {
             counts[i] = 0;
     }
 
-    void init(hls_ik::pipeline_ports& p) {
-        init(p.tc_meta_counts);
-        init(p.tc_data_counts);
+    void init(hls_ik::tc_pipeline_data_counts& tc) {
+        init(tc.tc_meta_counts);
+        init(tc.tc_data_counts);
     }
 
-    void init(hls_ik::ports& p) {
-        init(p.host);
-        init(p.net);
+    void init(hls_ik::tc_ikernel_data_counts& tc) {
+        init(tc.host);
+        init(tc.net);
+    }
+
+    void memory_unused(memory_t& m, hls::stream<bool>& dummy_update)
+    {
+#pragma HLS inline
+        bool dummy;
+
+        dummy_update.write_nb(false);
+
+        if (!dummy_update.read_nb(dummy))
+            dummy = false;
+
+        hls_helpers::produce(m.ar, dummy);
+        hls_helpers::produce(m.aw, dummy);
+        hls_helpers::produce(m.w, dummy);
+        hls_helpers::consume(m.r, dummy);
+        hls_helpers::consume(m.b, dummy);
     }
 }

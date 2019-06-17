@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2016-2017 Haggai Eran, Gabi Malka, Lior Zeno, Maroun Tork
+// Copyright (c) 2016-2018 Haggai Eran, Gabi Malka, Lior Zeno, Maroun Tork
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -25,42 +25,42 @@
 
 #pragma once
 
-#include "echo.hpp"
+#include <axi_data.hpp>
 
-// 6d1efc9b-8655-42d7-8000-9e3e998dbd5c
-#include <ikernel.hpp>
-#include <gateway.hpp>
-#include <context_manager.hpp>
-
-class echo : public hls_ik::ikernel, public hls_ik::virt_gateway_impl<echo> {
+/* Assumes in/out are AXI4-Stream (blocking read/writes) */
+class drop_or_pass {
 public:
-    echo();
+    drop_or_pass() : _state(DECISION) {}
 
-    virtual void step(hls_ik::ports& p, hls_ik::tc_ikernel_data_counts& tc);
+    void filter(hls::stream<bool>& decision, hls_ik::data_stream& in,
+                hls_ik::data_stream& out) {
+    #pragma HLS pipeline enable_flush ii=1
+        switch (_state) {
+        case DECISION:
+            if (decision.empty())
+                break;
 
-    virtual int reg_write(int address, int value, hls_ik::ikernel_id_t ikernel_id);
-    virtual int reg_read(int address, int* value, hls_ik::ikernel_id_t ikernel_id);
+            _pass = decision.read();
 
+            _state = STREAM;
+            /* Fall through */
+
+        case STREAM:
+            if (in.empty())
+                break;
+
+            hls_ik::axi_data d = in.read();
+
+            if (_pass)
+                out.write(d);
+
+            if (d.last)
+                _state = DECISION;
+
+            break;
+        }
+    }
 private:
-    void echo_pipeline(hls_ik::ports& p, hls_ik::tc_ikernel_data_counts& tc);
-
-    enum { METADATA, DATA } state;
-    /* First data word */
-    bool first;
-    /* Respond to the current packet */
-    bool respond;
-    /* Metadata of the current packet */
-    hls_ik::metadata metadata;
-
-    hls::stream<bool> port_dummy_update;
-
-    /* By default, respond to all packets. When true, respond to sockperf
-     * packets with "pong" requests. */
-    bool respond_to_sockperf;
-    /* A register with the gateway exposed value. */
-    bool respond_to_sockperf_cache;
-    /* Updates from the gateway */
-    hls::stream<bool> respond_to_sockperf_update;
+    enum { DECISION, STREAM } _state;
+    bool _pass;
 };
-
-DECLARE_TOP_FUNCTION(echo_top);

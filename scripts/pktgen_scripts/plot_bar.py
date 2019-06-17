@@ -58,7 +58,7 @@ with open(args.ikernel_input) as fp:
 fp.close()
 
 fig = plt.figure()
-N = len(x_b) #or x_i
+N = len(x_i) #or x_i
 ind = np.arange(N)    # the x locations for the groups
 width = 3      # the width of the bars: can also be len(x) sequence
 
@@ -82,13 +82,13 @@ ind = np.arange(N)    # the x locations for the groups
 width = 3      # the width of the bars: can also be len(x) sequence
 
 p1=plt.bar(x_i,y_i,width,color="r")
-p2=plt.bar(x_b,y_b,width,bottom=y_i)
+p2=plt.bar(x_i,y_b,width,bottom=y_i)
 
 plt.ylabel(args.y_axis)
-plt.xlabel(args.y_axis)
+plt.xlabel(args.x_axis)
 plt.title(args.name)
-plt.xticks(x_axis_fixed, x_b) #or x_i
-plt.yticks(np.arange(0, 81, 10))
+plt.xticks(x_axis_fixed, x_i) #or x_i
+plt.yticks(np.arange(0, 46, 5))
 plt.legend((p1[0], p2[0]), ('ikernel', 'baseline'))
 
 fig.savefig(args.output+'.jpg')

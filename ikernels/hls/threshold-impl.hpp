@@ -29,6 +29,7 @@
 #include <gateway.hpp>
 #include <flow_table.hpp>
 #include <context_manager.hpp>
+#include <drop_or_pass.hpp>
 
 #include "threshold.hpp"
 
@@ -61,7 +62,7 @@ public:
 
 class threshold : public hls_ik::ikernel, public hls_ik::virt_gateway_impl<threshold> {
 public:
-    virtual void step(hls_ik::ports& ports);
+    virtual void step(hls_ik::ports& ports, hls_ik::tc_ikernel_data_counts& tc);
     virtual int reg_write(int address, int value, hls_ik::ikernel_id_t ikernel_id);
     virtual int reg_read(int address, int* value, hls_ik::ikernel_id_t ikernel_id);
     void update_stats(hls_ik::ikernel_id_t id, value v, bool drop, bool backpressure);
@@ -69,22 +70,25 @@ public:
 protected:
     threshold_contexts contexts;
 
-    void net_ingress(hls_ik::pipeline_ports& p);
+    void net_ingress(hls_ik::pipeline_ports& p, hls_ik::tc_pipeline_data_counts& tc);
     void parser();
-    void egress(hls_ik::pipeline_ports& p);
+    void egress();
 
     hls::stream<value> parsed;
-    hls_ik::data_stream data_dup_to_parser, data_dup_to_egress;
+    hls_ik::data_stream data_dup_to_parser, data_dup_to_egress,
+                        _data_egress_to_filter;
 
     struct decision_t {
-        bool drop;
         value v;
         hls_ik::ring_id_t ring_id;
     };
     hls::stream<decision_t> decisions;
+    hls::stream<bool> _decision_pass;
     decision_t egress_last_decision;
 
     enum { FIRST, REST } parser_state;
 
     enum { IDLE, STREAM } egress_state;
+
+    drop_or_pass _dropper;
 };

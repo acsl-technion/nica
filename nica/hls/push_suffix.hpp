@@ -36,7 +36,7 @@ public:
 
     push_suffix() : state(IDLE) {}
 
-    void reorder(hls_ik::data_stream& data_in, 
+    void reorder(hls_ik::data_stream& data_in,
                  hls::stream<bool>& empty_packet,
 		 hls::stream<bool>& enable_stream,
                  hls::stream<suffix_t>& suffix_in, hls_ik::data_stream& out)
@@ -46,18 +46,28 @@ public:
 
         switch (state)
         {
-        case IDLE: {
-            if (empty_packet.empty() || enable_stream.empty() || suffix_in.empty())
+        case IDLE:
+            if (empty_packet.empty() || enable_stream.empty())
                 break;
 
-            bool empty = empty_packet.read();
+            empty = empty_packet.read();
 	    enable = enable_stream.read();
+
+            if (!enable) {
+                state = empty ? IDLE : DATA;
+                break;
+            } else {
+                state = READ_SUFFIX;
+                /* Fall through */
+            }
+
+        case READ_SUFFIX:
+            if (suffix_in.empty())
+                break;
+
             suffix = suffix_in.read();
 
-            if (!enable && empty) {
-                // Nothing to do
-                break;
-            } else if (enable && empty) {
+            if (empty) {
                 last_flit_bytes = suffix_length_bytes;
                 state = LAST;
             } else {
@@ -65,7 +75,7 @@ public:
                 state = DATA;
             }
             break;
-        }
+
         case DATA: {
             if (data_in.empty() || out.full())
                 break;
@@ -131,11 +141,12 @@ last:
 protected:
     /** Reordering state:
      *  IDLE   waiting for header stream entry.
+     *  READ_SUFFIX   read the suffix to push (if applies)
      *  DATA   reading and transmitting the data stream.
      *  LAST   output the suffix if it did not fit in the last data flit.
      */
-    enum { IDLE, DATA, LAST } state;
-    bool enable;
+    enum { IDLE, READ_SUFFIX, DATA, LAST } state;
+    bool enable, empty;
     suffix_t suffix;
     ap_uint<6> last_flit_bytes;
 };

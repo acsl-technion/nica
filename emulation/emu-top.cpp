@@ -99,10 +99,13 @@ namespace emulation {
 
     struct ikernel_wrapper {
         hls_ik::ports ports;
+        hls_ik::tc_ikernel_data_counts tc;
         hls_ik::ikernel_id id;
         virt_gateway_wrapper gateway;
         hls_ik::virt_gateway_registers gateway_regs;
-        using ikernel_top_func = std::function<void(hls_ik::ports&, hls_ik::ikernel_id&, hls_ik::virt_gateway_registers&)>;
+        using ikernel_top_func = std::function<void(hls_ik::ports&,
+            hls_ik::ikernel_id&, hls_ik::virt_gateway_registers&,
+            hls_ik::tc_ikernel_data_counts&)>;
         ikernel_top_func func;
 
         ikernel_wrapper() :
@@ -125,12 +128,12 @@ namespace emulation {
             else
                 throw std::exception();
 
-            hls_ik::init(ports);
+            hls_ik::init(tc);
         }
 
         void step() 
         {
-            func(ports, id, gateway.gateway);
+            func(ports, id, gateway.gateway, tc);
         }
 
         void reg_access(uint32_t address, uint32_t* value, bool read)
@@ -269,7 +272,7 @@ namespace emulation {
             flit.set_data(pkt->data + i, cur_len);
             flit.last = i + cur_len == pkt->len;
 
-            mlx::axi4s mlx_flit(flit, 1, 1);
+            mlx::axi4s mlx_flit(flit, 0, 1);
 
             if (pkt->dir == Net)
                 prt_nw2sbu.write(mlx_flit);

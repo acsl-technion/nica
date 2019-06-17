@@ -19,14 +19,21 @@ class IDPool(object):
         self.new_id = new_id
         self.last_id = min_id
 
-    def get_id(self):
-        if len(self.ids_free) > 0:
-            id_ = self.ids_free.pop()
+    def get_id(self, condition=lambda _: True):
+        filtered_free = [id_ for id_ in self.ids_free if condition(id_)]
+        if len(filtered_free) > 0:
+            id_ = filtered_free[0]
+            self.ids_free.remove(id_)
         else:
             id_ = self.new_id(self.last_id)
+            self.last_id = id_
+            while not condition(id_):
+                prev = id_
+                id_ = self.new_id(self.last_id)
+                self.last_id = id_
+                self.ids_free.add(prev)
             if self.max_id and id_ >= self.max_id:
                 raise OSError(errno.ENOSPC)
-        self.last_id = id_
         self.ids_in_use.add(id_)
         return id_
 

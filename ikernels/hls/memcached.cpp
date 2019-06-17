@@ -58,9 +58,10 @@ int memcached_contexts::rpc(int address, int *v, ikernel_id_t ikernel_id, bool r
 }
 
 memcached::memcached() :
-    _action_stream(150),
-    _kv_pairs_stream(150),
-    _parsed_requests_stream(150)
+    _action_stream(150, 0, "_action_stream"),
+    _kv_pairs_stream(150, 0, "_kv_pairs_stream"),
+    _req_prs2mem(150, 0, "_req_prs2mem"),
+    _req_mem2mem(150, 0, "_req_mem2mem")
 {
 #pragma HLS stream variable=_buffer_data depth=128
 #pragma HLS stream variable=_parser_data depth=30
@@ -73,8 +74,13 @@ memcached::memcached() :
 #pragma HLS stream variable=_n2h_stats depth=30
 #pragma HLS stream variable=_stats_cache depth=30
 #pragma HLS stream variable=_backpressure_drop depth=30
+#pragma HLS stream variable=&_action_stream._stream depth=300
+#pragma HLS stream variable=&_kv_pairs_stream._stream depth=300
+#pragma HLS stream variable=&_req_prs2mem._stream depth=300
+#pragma HLS stream variable=&_req_mem2mem._stream depth=300
 #pragma HLS data_pack variable=_reply_data_stream
-#pragma HLS data_pack variable=&_parsed_requests_stream._stream
+#pragma HLS data_pack variable=&_req_prs2mem._stream
+#pragma HLS data_pack variable=&_req_mem2mem._stream
 #pragma HLS data_pack variable=&_kv_pairs_stream._stream
 }
 
@@ -206,12 +212,13 @@ void memcached::drop_or_pass(hls_ik::pipeline_ports& in) {
 
 }
 
-void memcached::action_resolution(hls_ik::pipeline_ports& in) {
+void memcached::action_resolution(hls_ik::pipeline_ports& in,
+                                  hls_ik::tc_pipeline_data_counts& tc) {
 #pragma HLS pipeline enable_flush ii=4
     _action_stream.empty_progress();
     update_stats();
 
-    if (contexts.update())
+    if (ctx.update())
         return;
     if (ikernel::update())
         return;
@@ -223,10 +230,10 @@ void memcached::action_resolution(hls_ik::pipeline_ports& in) {
         hls_ik::metadata metadata = _buffer_metadata.read();
         bool action = _action_stream.read();
 
-        ring_id_t ring_id = contexts.find_ring(metadata.ikernel_id);
+        ring_id_t ring_id = ctx.find_ring(metadata.ikernel_id);
 
         if (action) {
-            bool backpressure = !can_transmit(in, metadata.ikernel_id, ring_id, metadata.length + 32, HOST);
+            bool backpressure = !can_transmit(tc, metadata.ikernel_id, ring_id, metadata.length + 32, HOST);
 
             if (backpressure) {
                 action = false;
@@ -257,7 +264,8 @@ void memcached::action_resolution(hls_ik::pipeline_ports& in) {
     }
 }
 
-void memcached::intercept_out(hls_ik::pipeline_ports &out) {
+void memcached::intercept_out(hls_ik::pipeline_ports &out,
+                              hls_ik::tc_pipeline_data_counts& tc) {
 #pragma HLS pipeline enable_flush ii=1
     _kv_pairs_stream.full_progress();
 
@@ -265,7 +273,7 @@ void memcached::intercept_out(hls_ik::pipeline_ports &out) {
         case METADATA:
             if (!out.metadata_input.empty() && !h2n_arb.m1.full()) {
                 _out_metadata = out.metadata_input.read();
-                _intercept_tc_backpressure = !can_transmit(out, _out_metadata.ikernel_id, 0,
+                _intercept_tc_backpressure = !can_transmit(tc, _out_metadata.ikernel_id, 0,
                                                            _out_metadata.length, NET);
                 if (!_intercept_tc_backpressure) {
                     h2n_arb.m1.write(_out_metadata);
@@ -315,7 +323,7 @@ void memcached::parse_packet(hls_ik::trace_event events[IKERNEL_NUM_EVENTS]) {
     events[MEMCACHED_EVENT_PARSED_REQUESTS_STREAM_FULL_INTERNAL] = false;
     events[MEMCACHED_EVENT_PARSED_REQUESTS_STREAM_WRITE] = false;
 
-    _parsed_requests_stream.full_progress();
+    _req_prs2mem.full_progress();
 
     switch (_in_state) {
         case METADATA:
@@ -327,10 +335,10 @@ void memcached::parse_packet(hls_ik::trace_event events[IKERNEL_NUM_EVENTS]) {
             break;
 
         case DATA: {
-            const bool requests_full = _parsed_requests_stream.full();
+            const bool requests_full = _req_prs2mem.full();
             events[MEMCACHED_EVENT_PARSED_REQUESTS_STREAM_FULL] = requests_full;
             events[MEMCACHED_EVENT_PARSED_REQUESTS_STREAM_FULL_INTERNAL] =
-                    _parsed_requests_stream.internal_full();
+                    _req_prs2mem.internal_full();
             if (!_parser_data.empty() && !requests_full) {
                 axi_data d = _parser_data.read();
 
@@ -353,7 +361,7 @@ void memcached::parse_packet(hls_ik::trace_event events[IKERNEL_NUM_EVENTS]) {
 
                 if (d.last) {
                     _n2h_stats.write(std::make_tuple(_parsed_request.metadata.ikernel_id, _parsed_request.type));
-                    _parsed_requests_stream.write(_parsed_request);
+                    _req_prs2mem.write(_parsed_request);
                     events[MEMCACHED_EVENT_PARSED_REQUESTS_STREAM_WRITE] = true;
                     _in_offset = 0;
                     _in_state = METADATA;
@@ -365,65 +373,106 @@ void memcached::parse_packet(hls_ik::trace_event events[IKERNEL_NUM_EVENTS]) {
     }
 }
 
-void memcached::handle_parsed_packet(memory& m, hls_ik::trace_event events[IKERNEL_NUM_EVENTS],
-                                     hls_ik::pipeline_ports& host) {
+void memcached::handle_parsed_packet(memory& m, hls_ik::trace_event events[IKERNEL_NUM_EVENTS])
+{
 #pragma HLS pipeline enable_flush ii=4
-// Ignore memory access dependency between pipelined invocations. We assume even
-// if reads and writes are reordered this would have the same effect as set and
-// get packets being reordered in the network.
-#pragma HLS dependence variable=m.mem intra false
-#pragma HLS dependence variable=m.mem inter false
 
-    _action_stream.full_progress();
     _kv_pairs_stream.empty_progress();
-    _parsed_requests_stream.empty_progress();
+    _req_prs2mem.empty_progress();
+    _req_mem2mem.full_progress();
 
-    if (cache_contexts.update()) {
+    if (cache_ctx.update()) {
         return;
     }
 
-    const bool parsed_requests_stream_empty = _parsed_requests_stream.empty();
+    const bool parsed_requests_stream_empty = _req_prs2mem.empty();
     events[MEMCACHED_EVENT_PARSED_REQUESTS_STREAM_EMPTY] =
         parsed_requests_stream_empty;
     events[MEMCACHED_EVENT_PARSED_REQUESTS_STREAM_READ] = false;
 
     if (!_kv_pairs_stream.empty()) {
         memcached_key_value_pair kv = _kv_pairs_stream.read();
-        _index.insert(m, kv.key, kv.value, cache_contexts[kv.ikernel_id].log_size, kv.ikernel_id);
+        _index.insert(m, kv.key, kv.value, cache_ctx[kv.ikernel_id].log_size, kv.ikernel_id);
         return;
     }
 
-    if (parsed_requests_stream_empty || _action_stream.full()) return;
+    if (parsed_requests_stream_empty || !_index.can_post_find(m) ||
+        _req_mem2mem.full())
+    {
+        return;
+    }
 
     events[MEMCACHED_EVENT_PARSED_REQUESTS_STREAM_READ] = true;
-    memcached_parsed_request parsed_request = _parsed_requests_stream.read();
+    memcached_parsed_request parsed_request = _req_prs2mem.read();
 
-    bool pass_to_host = true;
     ikernel_id_t id = parsed_request.metadata.ikernel_id;
 
     if (parsed_request.type == GET) {
-        maybe<memcached_value<MEMCACHED_VALUE_SIZE> > found = _index.find(m, parsed_request.key, cache_contexts[id].log_size, id);
-        // Pass the request to the host if the reply streams are full (even upon a cache hit)
-        if (found.valid()) {
-            pass_to_host = false;
-            bool tc_backpressure = !can_transmit(host, id, 0, REPLY_SIZE, NET);
-            if (tc_backpressure) {
-                _stats_cache.write(std::make_tuple(id, STAT_HIT_TC_BACKPRESSURE));
-            } else if (!_reply_metadata_stream.full() && !_reply_data_stream.full()) {
-                _reply_metadata_stream.write(parsed_request.metadata.reply(REPLY_SIZE));
-                _reply_data_stream.write(generate_response(parsed_request, found.value()));
-                _stats_cache.write(std::make_tuple(id, STAT_HIT_GEN));
-            } else {
-                _stats_cache.write(std::make_tuple(id, STAT_HIT_DROP));
-            }
-        } else {
-            _stats_cache.write(std::make_tuple(id, STAT_MISS));
-        }
+        _index.find(m, parsed_request.key, cache_ctx[id].log_size, id);
     } else if (parsed_request.type == SET) {
-        _index.erase(m, parsed_request.key, cache_contexts[id].log_size, id);
+        _index.erase(m, parsed_request.key, cache_ctx[id].log_size, id);
+    }
+    _req_mem2mem.write_nb(parsed_request);
+}
+
+void memcached::handle_memory_responses(memory& m, hls_ik::tc_pipeline_data_counts& tc_host) {
+#pragma HLS pipeline enable_flush ii=4
+    bool pass_to_host = true;
+    ikernel_id_t id;
+
+    _action_stream.full_progress();
+    _req_mem2mem.empty_progress();
+
+    /* Handle write responses */
+    if (m.has_write_response()) {
+        m.get_write_response();
+        // TODO statistics about the repsonses status */
     }
 
-    _action_stream.write(pass_to_host);
+    switch (mem_resp_state) {
+    case MEM_RESP_IDLE:
+        if (_req_mem2mem.empty() || _action_stream.full())
+            return;
+
+        _req_mem2mem.read_nb(mem_resp_req);
+        mem_resp_state = MEM_RESP_WAIT;
+        /* Fall through */
+
+    case MEM_RESP_WAIT:
+        ikernel_id_t id = mem_resp_req.metadata.ikernel_id;
+
+        switch (mem_resp_req.type) {
+        case GET: {
+            if (!_index.has_find_result(m))
+                return;
+
+            maybe<memcached_value<MEMCACHED_VALUE_SIZE> > found = _index.get_find_result(m);
+
+            if (found.valid()) {
+                pass_to_host = false;
+                bool tc_backpressure = !can_transmit(tc_host, id, 0, REPLY_SIZE, NET);
+                if (tc_backpressure) {
+                    _stats_cache.write(std::make_tuple(id, STAT_HIT_TC_BACKPRESSURE));
+                } else if (!_reply_metadata_stream.full() && !_reply_data_stream.full()) {
+                    _reply_metadata_stream.write(mem_resp_req.metadata.reply(REPLY_SIZE));
+                    _reply_data_stream.write(generate_response(mem_resp_req, found.value()));
+                    _stats_cache.write(std::make_tuple(id, STAT_HIT_GEN));
+                } else {
+                    _stats_cache.write(std::make_tuple(id, STAT_HIT_DROP));
+                }
+            } else {
+                _stats_cache.write(std::make_tuple(id, STAT_MISS));
+            }
+            break;
+        }
+        case SET:
+        case OTHER:
+            break;
+        }
+        _action_stream.write(pass_to_host);
+        mem_resp_state = MEM_RESP_IDLE;
+        break;
+    }
 }
 
 memcached_response memcached::generate_response(const memcached_parsed_request& parsed_request, const memcached_value<MEMCACHED_VALUE_SIZE> &value) {
@@ -444,10 +493,10 @@ int memcached::reg_write(int address, int value, ikernel_id_t ikernel_id)
     }
 
     if (address == MEMCACHED_REG_CACHE_SIZE) {
-        return cache_contexts.rpc(address, &value, ikernel_id, false);
+        return cache_ctx.rpc(address, &value, ikernel_id, false);
     }
 
-    return contexts.rpc(address, &value, ikernel_id, false);
+    return ctx.rpc(address, &value, ikernel_id, false);
 }
 
 
@@ -459,10 +508,10 @@ int memcached::reg_read(int address, int* value, ikernel_id_t ikernel_id) {
     }
 
     if (address == MEMCACHED_REG_CACHE_SIZE) {
-        return cache_contexts.rpc(address, value, ikernel_id, true);
+        return cache_ctx.rpc(address, value, ikernel_id, true);
     }
 
-    return contexts.rpc(address, value, ikernel_id, true);
+    return ctx.rpc(address, value, ikernel_id, true);
 }
 
 void memcached::update_stats()
@@ -473,7 +522,7 @@ void memcached::update_stats()
     if (!_n2h_stats.empty()) {
         request_type req;
         std::tie(id, req) =  _n2h_stats.read();
-        memcached_context& c = contexts[id];
+        memcached_context& c = ctx[id];
 
         switch (req) {
         case GET:
@@ -491,7 +540,7 @@ void memcached::update_stats()
     if (!_h2n_stats.empty()) {
         h2n_packet_type resp;
         std::tie(id, resp) = _h2n_stats.read();
-        memcached_context& c = contexts[id];
+        memcached_context& c = ctx[id];
 
         switch (resp) {
         case H2N_GET_RESPONSE:
@@ -506,7 +555,7 @@ void memcached::update_stats()
     if (!_stats_cache.empty()) {
         cache_stats_type type;
         std::tie(id, type) = _stats_cache.read();
-        memcached_context &c = contexts[id];
+        memcached_context &c = ctx[id];
 
         switch (type) {
             case STAT_HIT_GEN:
@@ -527,23 +576,24 @@ void memcached::update_stats()
     if (!_backpressure_drop.empty()) {
         bool hit;
         std::tie(id, hit) = _backpressure_drop.read();
-        memcached_context& c = contexts[id];
+        memcached_context& c = ctx[id];
 
         ++c.backpressure_drop_count;
     }
 }
 
-void memcached::step(hls_ik::ports& p)
+void memcached::step(hls_ik::ports& p, hls_ik::tc_ikernel_data_counts& tc)
 {
 #pragma HLS inline
     _raw_dup.dup2(p.net.data_input, _parser_data, _buffer_data);
     _metadata_dup.dup2(p.net.metadata_input, _parser_metadata, _buffer_metadata);
     drop_or_pass(p.net);
-    action_resolution(p.net);
-    handle_parsed_packet(p.mem, p.events, p.host);
+    action_resolution(p.net, tc.net);
+    handle_parsed_packet(p.mem, p.events);
+    handle_memory_responses(p.mem, tc.host);
     parse_packet(p.events);
     reply_cached_value(p.host);
-    intercept_out(p.host);
+    intercept_out(p.host, tc.host);
     h2n_arb.arbitrate(p.host.metadata_output, p.host.data_output);
 }
 

@@ -46,7 +46,7 @@ namespace {
                    &c, &s, events,
                    BOOST_PP_ENUM_PARAMS(NUM_IKERNELS, ports),
                    h2n_tc, h2n_tc, n2h_tc, n2h_tc);
-            echo_top(p, id, gateway);
+            echo_top(p, id, gateway, tc);
         }
 
         void test_passthrough(pipeline_ports& in, pipeline_ports& out) {

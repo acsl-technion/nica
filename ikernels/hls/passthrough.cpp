@@ -44,7 +44,7 @@ namespace hls_ik {
     }
 }
 
-void passthrough::intercept_in(pipeline_ports& p) {
+void passthrough::intercept_in(pipeline_ports& p, tc_pipeline_data_counts& tc) {
 #pragma HLS pipeline enable_flush ii=3
     if (contexts.update())
         return;
@@ -57,7 +57,7 @@ void passthrough::intercept_in(pipeline_ports& p) {
         bool backpressure = false;
         // CR Mode
         if (c.ring_id != 0) {
-            backpressure = !c.ignore_credits && !can_transmit(p, m.ikernel_id, c.ring_id, m.length, HOST);
+            backpressure = !c.ignore_credits && !can_transmit(tc, m.ikernel_id, c.ring_id, m.length, HOST);
 
             if (!backpressure) {
                 new_message(c.ring_id, HOST);
@@ -78,41 +78,12 @@ void passthrough::intercept_in(pipeline_ports& p) {
     }
 }
 
-void passthrough::drop_or_pass(pipeline_ports& p) {
-#pragma HLS pipeline enable_flush ii=1
-
-    switch (_state) {
-        case DECISION:
-            if (!_decisions.empty()) {
-                _action = _decisions.read();
-
-                _state = STREAM;
-                goto stream;
-            }
-            break;
-        case STREAM:
-stream:
-            if (!p.data_input.empty()) {
-                axi_data d = p.data_input.read();
-
-                if (_action) {
-                    p.data_output.write(d);
-                }
-
-                if (d.last) {
-                    _state = DECISION;
-                }
-            }
-
-            break;
-    }
-}
-
-void passthrough::step(ports& p) {
+void passthrough::step(ports& p, tc_ikernel_data_counts& tc) {
 #pragma HLS inline
+    memory_unused(p.mem, dummy_update);
     pass_packets(p.host);
-    intercept_in(p.net);
-    drop_or_pass(p.net);
+    intercept_in(p.net, tc.net);
+    dropper.filter(_decisions, p.net.data_input, p.net.data_output);
 }
 
 int passthrough::reg_write(int address, int value, ikernel_id_t ikernel_id)

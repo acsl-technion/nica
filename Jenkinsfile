@@ -38,7 +38,7 @@ properties ([parameters([
 ])])
 
 def build_hls_project(build_dir, project, simulation) {
-    def target = simulation ? "${project}-sim" : "${project}"
+    def target = simulation ? "${project}-sim" : "${project}-hls"
     if (simulation) {
         echo "Running HLS RTL/C cosimulation for project ${project}."
     } else {
@@ -98,12 +98,6 @@ node {
             // Pull request build
             checkout scm
         }
-        dir ('libvma') {
-            // libvma is needed to build the host apps
-            git credentialsId: '336fdc5e-b4a2-47dc-adde-ce4343484399', url:
-            'git@bitbucket.org:haggai_e/libvma.git', branch: 'nica'
-        }
-
         dir ('googletest') {
             // Google test for the HLS ikernel tests and NICA tests
             git 'https://github.com/google/googletest'
@@ -112,24 +106,12 @@ node {
             $CMAKE -DBUILD_GMOCK=OFF -DBUILD_GTEST=ON .
             make -j"""
         }
-        dir('libvma') {
-            // Build libvma, pointing it to the HLS repository for its headers
-            withEnv(["ACLOCAL_PATH=/usr/share/aclocal"]) {
-                sh '''
-                ./autogen.sh
-                ./configure IKERNEL_PATH=`pwd`/../nica
-                make -j
-                '''
-            }
-        }
         dir('nica/build') {
             // Build the HLS repository (host part only)
             // One ikernel
             sh """
             rm -f CMakeCache.txt
             $CMAKE \
-                -DNICA_DIR=`pwd`/../../libvma/src/nica \
-                -DVMA_DIR=`pwd`/../../libvma/src \
                 -DGTEST_ROOT=${GTEST_ROOT} \
                 -DXILINX_VIVADO_VERSION=${params.VIVADO_VERSION} \
                 -DNUM_IKERNELS=1 \
@@ -146,8 +128,6 @@ node {
         //    // Two ikernels
         //    sh """
         //    $CMAKE \
-        //        -DNICA_DIR=`pwd`/../../libvma/src/nica \
-        //        -DVMA_DIR=`pwd`/../../libvma/src \
         //        -DGTEST_ROOT=${GTEST_ROOT} \
         //        -DNUM_IKERNELS=2 \
         //        ..
@@ -182,6 +162,11 @@ node {
     ]
     currentBuild.result = 'SUCCESS'
     parallel branches
+
+    // cleanup
+    dir('nica/build') {
+        sh "find -maxdepth 4 -name .autopilot -exec rm -r '{}' ';'"
+    }
 }
 
 // Choose the ikernel to build based on the branch name
@@ -191,6 +176,7 @@ def getBuildIkernel(branchName) {
         'pktgen': 'pktgen',
         'memcached-cr': 'memcached',
         'memcached-ddr': 'memcached',
+        'async-memory': 'memcached',
         'echo': 'echo'
     ].withDefault { key -> 'threshold' }
 

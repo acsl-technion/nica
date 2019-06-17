@@ -30,15 +30,15 @@ add_custom_target(pcap_files ALL DEPENDS ${nica_pcap_files})
 hls_target(nica nica "${nica_sources}" "${nica_testbench_sources};${nica_pcap_files}" nica)
 
 # NICA
-add_library(nica-hls ${nica_sources})
-set_property(TARGET nica-hls PROPERTY POSITION_INDEPENDENT_CODE ON)
-target_compile_features(nica-hls PRIVATE cxx_auto_type)
-target_link_libraries(nica-hls pcap)
+add_library(nica-csim ${nica_sources})
+set_property(TARGET nica-csim PROPERTY POSITION_INDEPENDENT_CODE ON)
+target_compile_features(nica-csim PRIVATE cxx_auto_type)
+target_link_libraries(nica-csim pcap)
 
 add_executable(nica_tests EXCLUDE_FROM_ALL ${nica_testbench_sources})
 add_dependencies(check nica_tests)
 target_compile_features(nica_tests PRIVATE cxx_auto_type)
-target_link_libraries(nica_tests pcap nica-hls ${GTEST_LIBRARIES} Threads::Threads)
+target_link_libraries(nica_tests pcap nica-csim ${GTEST_LIBRARIES} Threads::Threads)
 add_dependencies(nica_tests pcap_files)
 
 foreach(f passthrough input all_sizes 0bad)

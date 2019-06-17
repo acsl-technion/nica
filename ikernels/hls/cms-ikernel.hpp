@@ -45,13 +45,17 @@ struct value_and_frequency {
     value frequency;
 };
 
-void cms_ikernel(hls_ik::ports& ik, hls_ik::ikernel_id& uuid, hls_ik::virt_gateway_registers& gateway,
-	     value_and_frequency& to_heap, hls::stream<value_and_frequency>& heap_out, ap_uint<32> k_value);
+void cms_ikernel(hls_ik::ports& ik, hls_ik::ikernel_id& uuid,
+                 hls_ik::virt_gateway_registers& gateway,
+                 value_and_frequency& to_heap,
+                 hls::stream<value_and_frequency>& heap_out,
+                 ap_uint<32> k_value,
+                 hls_ik::tc_ikernel_data_counts& tc);
 
 class cms : public hls_ik::ikernel, public hls_ik::virt_gateway_impl<cms> {
 public:
 
-    virtual void step(hls_ik::ports& ports);
+    virtual void step(hls_ik::ports& ports, hls_ik::tc_ikernel_data_counts& tc);
     virtual int reg_write(int address, int value, hls_ik::ikernel_id_t ikernel_id);
     virtual int reg_read(int address, int* value, hls_ik::ikernel_id_t ikernel_id);
 

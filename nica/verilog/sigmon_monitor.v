@@ -31,6 +31,18 @@ module sigmon_monitor (
     input wire 	       got_ddrwdone,
     input wire 	       got_ddrraddr,
     input wire 	       got_ddrrdata,
+    input wire         axi4mm_aw_rdy,
+    input wire         axi4mm_aw_vld,
+    input wire         axi4mm_w_rdy,
+    input wire         axi4mm_w_vld,
+    input wire         axi4mm_w_last,
+    input wire         axi4mm_b_rdy,
+    input wire         axi4mm_b_vld,
+    input wire         axi4mm_ar_rdy,
+    input wire         axi4mm_ar_vld,
+    input wire         axi4mm_r_rdy,
+    input wire         axi4mm_r_vld,
+    input wire         axi4mm_r_last,
     input wire 	       dram_test_enabled,
     input wire [15:0]  nica_events,
     input wire [15:0]  count_events,
@@ -445,9 +457,39 @@ module sigmon_monitor (
 	  event1_en = 1'b1;
 	  implied_sample_datain = 48'h000000000000;
 	end
+      DRAM_WADDR_RDY:
+	begin
+	  event1 = axi4mm_aw_rdy;
+	  event1_en = 1'b1;
+	  implied_sample_datain = 48'h000000000000;
+	end
+      DRAM_WADDR_VLD:
+	begin
+	  event1 = axi4mm_aw_vld;
+	  event1_en = 1'b1;
+	  implied_sample_datain = 48'h000000000000;
+	end
       DRAM_WDATA:
 	begin
 	  event1 = got_ddrwdata;
+	  event1_en = 1'b1;
+	  implied_sample_datain = 48'h000000000000;
+	end
+      DRAM_WDATA_VLD:
+	begin
+	  event1 = axi4mm_w_vld;
+	  event1_en = 1'b1;
+	  implied_sample_datain = 48'h000000000000;
+	end
+      DRAM_WDATA_RDY:
+	begin
+	  event1 = axi4mm_w_rdy;
+	  event1_en = 1'b1;
+	  implied_sample_datain = 48'h000000000000;
+	end
+      DRAM_WDATA_LAST:
+	begin
+	  event1 = axi4mm_w_last;
 	  event1_en = 1'b1;
 	  implied_sample_datain = 48'h000000000000;
 	end
@@ -457,15 +499,57 @@ module sigmon_monitor (
 	  event1_en = 1'b1;
 	  implied_sample_datain = 48'h000000000000;
 	end
+      DRAM_WDONE_RDY:
+	begin
+	  event1 = axi4mm_b_rdy;
+	  event1_en = 1'b1;
+	  implied_sample_datain = 48'h000000000000;
+	end
+      DRAM_WDONE_VLD:
+	begin
+	  event1 = axi4mm_b_vld;
+	  event1_en = 1'b1;
+	  implied_sample_datain = 48'h000000000000;
+	end
       DRAM_RADDR:
 	begin
 	  event1 = got_ddrraddr;
 	  event1_en = 1'b1;
 	  implied_sample_datain = 48'h000000000000;
 	end
+      DRAM_RADDR_VLD:
+	begin
+	  event1 = axi4mm_ar_vld;
+	  event1_en = 1'b1;
+	  implied_sample_datain = 48'h000000000000;
+	end
+      DRAM_RADDR_RDY:
+	begin
+	  event1 = axi4mm_ar_rdy;
+	  event1_en = 1'b1;
+	  implied_sample_datain = 48'h000000000000;
+	end
       DRAM_RDATA:
 	begin
 	  event1 = got_ddrrdata;
+	  event1_en = 1'b1;
+	  implied_sample_datain = 48'h000000000000;
+	end
+      DRAM_RDATA_RDY:
+	begin
+	  event1 = axi4mm_r_rdy;
+	  event1_en = 1'b1;
+	  implied_sample_datain = 48'h000000000000;
+	end
+      DRAM_RDATA_VLD:
+	begin
+	  event1 = axi4mm_r_vld;
+	  event1_en = 1'b1;
+	  implied_sample_datain = 48'h000000000000;
+	end
+      DRAM_RDATA_LAST:
+	begin
+	  event1 = axi4mm_r_last;
 	  event1_en = 1'b1;
 	  implied_sample_datain = 48'h000000000000;
 	end
@@ -931,8 +1015,8 @@ module sigmon_monitor (
 	end
       DRAM_IK_RADDR:
 	begin
-	  event1 = got_ikraddr;
-	  event1_en = 1'b1;
+	  event2 = got_ikraddr;
+	  event2_en = 1'b1;
 	  implied_sample_datain = 48'h000000000000;
 	end
       DRAM_WADDR:
@@ -940,9 +1024,34 @@ module sigmon_monitor (
 	  event2 = got_ddrwaddr;
 	  event2_en = 1'b1;
 	end
+      DRAM_WADDR_RDY:
+	begin
+	  event2 = axi4mm_aw_rdy;
+	  event2_en = 1'b1;
+	end
+      DRAM_WADDR_VLD:
+	begin
+	  event2 = axi4mm_aw_vld;
+	  event2_en = 1'b1;
+	end
       DRAM_WDATA:
 	begin
 	  event2 = got_ddrwdata;
+	  event2_en = 1'b1;
+	end
+      DRAM_WDATA_VLD:
+	begin
+	  event2 = axi4mm_w_vld;
+	  event2_en = 1'b1;
+	end
+      DRAM_WDATA_RDY:
+	begin
+	  event2 = axi4mm_w_rdy;
+	  event2_en = 1'b1;
+	end
+      DRAM_WDATA_LAST:
+	begin
+	  event2 = axi4mm_w_last;
 	  event2_en = 1'b1;
 	end
       DRAM_WDONE:
@@ -950,14 +1059,49 @@ module sigmon_monitor (
 	  event2 = got_ddrwdone;
 	  event2_en = 1'b1;
 	end
+      DRAM_WDONE_RDY:
+	begin
+	  event2 = axi4mm_b_rdy;
+	  event2_en = 1'b1;
+	end
+      DRAM_WDONE_VLD:
+	begin
+	  event2 = axi4mm_b_vld;
+	  event2_en = 1'b1;
+	end
       DRAM_RADDR:
 	begin
 	  event2 = got_ddrraddr;
 	  event2_en = 1'b1;
 	end
+      DRAM_RADDR_VLD:
+	begin
+	  event2 = axi4mm_ar_vld;
+	  event2_en = 1'b1;
+	end
+      DRAM_RADDR_RDY:
+	begin
+	  event2 = axi4mm_ar_rdy;
+	  event2_en = 1'b1;
+	end
       DRAM_RDATA:
 	begin
 	  event2 = got_ddrrdata;
+	  event2_en = 1'b1;
+	end
+      DRAM_RDATA_RDY:
+	begin
+	  event2 = axi4mm_r_rdy;
+	  event2_en = 1'b1;
+	end
+      DRAM_RDATA_VLD:
+	begin
+	  event2 = axi4mm_r_vld;
+	  event2_en = 1'b1;
+	end
+      DRAM_RDATA_LAST:
+	begin
+	  event2 = axi4mm_r_last;
 	  event2_en = 1'b1;
 	end
       DRAM_TEST_ENABLE:

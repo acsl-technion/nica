@@ -26,7 +26,6 @@
 #include "RunnableServerBase.hpp"
 #include "CmsUdpServer.hpp"
 #include "cms-ikernel.hpp"
-#include <vma/vma_extra.h>
 
 #include <sstream>
 #include <future>

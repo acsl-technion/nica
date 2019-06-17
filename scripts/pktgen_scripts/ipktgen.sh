@@ -1,14 +1,16 @@
 #!/bin/bash
-#[input]: packet_size burst_size [tokens nwp_sx_gen_credits_init cxp_rx_passthrough_credits_init]
+#[input]: packet_size burst_size ikernel_tokens host_tokens [nwp_sx_gen_credits_init cxp_rx_passthrough_credits_init]
 
 register=../register.sh
 
-if [ $# -lt 2 ]; then
-	echo "Usage: ./ipktgen.sh packet_size burst_size [tokens [nwp_sx_gen_credits_init cxp_rx_passthrough_credits_init] ]"
+if [ $# -lt 4 ]; then
+	echo "Usage: ./ipktgen.sh packet_size burst_size ikernel_tokens host_tokens [nwp_sx_gen_credits_init cxp_rx_passthrough_credits_init]"
 	exit 1
 fi
 
+headers_size=46
 packet_size=$1
+payload_size=$[$packet_size-$headers_size]
 burst_size=$2
 #tokens=`$register 0x458 r 0x21`
 #gen_credits_init=""
@@ -46,9 +48,17 @@ fi
 #sudo mcra -a ~haggai/newton.adb /dev/mst/mt4117_pciconf0_fpga 0x9b1010.0 $gen_credits_init
 #sudo mcra -a ~haggai/newton.adb /dev/mst/mt4117_pciconf0_fpga 0x9b1010.9 0
 
+#change saturation and log_quota
+echo passthrough and genearted: saturation=0xf log_qouta=0xf
+$register 0x458 w 0x22 0xf
+$register 0x458 w 0x23 0xf
+$register 0x458 w 0x2 0xf
+$register 0x458 w 0x3 0xf
+
+
 # change the number of tokens
 #echo tokens=$tokens
 #$register 0x458 w 0x21 $tokens
 
 echo run_client...
-../run_client.sh $burst_size $packet_size offload $burst_size
+../run_client.sh $burst_size $payload_size offload $burst_size

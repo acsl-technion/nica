@@ -53,6 +53,7 @@ find_package(Threads REQUIRED)
 link_directories(../googletest/googlemock/gtest)
 
 if(BUILD_SOFTWARE)
+    add_subdirectory(libnica)
     add_subdirectory(baseline)
 endif()
 
@@ -71,7 +72,7 @@ function(hls_target proj hls_target_name sources testbench_sources top_function)
         COMMAND bash -c ${cmd} > ${proj}.tcl
         DEPENDS ${CMAKE_SOURCE_DIR}/ikernels/ikernel.tcl.in
     )
-    add_custom_target(${hls_target_name}
+    add_custom_target(${hls_target_name}-hls
         COMMAND env PATH=${TCPDUMP_PATH}:$$PATH GTEST_ROOT=${GTEST_ROOT}
             NUM_IKERNELS=${NUM_IKERNELS}
             NUM_TC=${NUM_TC}
@@ -80,7 +81,7 @@ function(hls_target proj hls_target_name sources testbench_sources top_function)
             MEMCACHED_VALUE_SIZE=${MEMCACHED_VALUE_SIZE}
             ${XILINX_VIVADO_HLS}/bin/vivado_hls
             ${proj}.tcl
-        DEPENDS ${proj}_tests ${proj}.tcl ${CMAKE_SOURCE_DIR}/nica/ikernel.tcl nica-hls
+        DEPENDS ${proj}_tests ${proj}.tcl ${CMAKE_SOURCE_DIR}/nica/ikernel.tcl nica-csim
     )
     add_custom_target(${hls_target_name}-sim
         COMMAND env PATH=${TCPDUMP_PATH}:$$PATH GTEST_ROOT=${GTEST_ROOT}
@@ -91,7 +92,7 @@ function(hls_target proj hls_target_name sources testbench_sources top_function)
             MEMCACHED_VALUE_SIZE=${MEMCACHED_VALUE_SIZE}
             SIMULATION_BUILD=1
             ${XILINX_VIVADO_HLS}/bin/vivado_hls ${proj}.tcl
-        DEPENDS ${proj}_tests ${proj}.tcl ${CMAKE_SOURCE_DIR}/nica/ikernel.tcl nica-hls
+        DEPENDS ${proj}_tests ${proj}.tcl ${CMAKE_SOURCE_DIR}/nica/ikernel.tcl nica-csim
     )
 endfunction(hls_target)
 
@@ -99,7 +100,7 @@ function(add_gtest name)
     target_link_libraries(${name}_tests ${GTEST_LIBRARIES} ${UUID_LIBRARIES})
     target_compile_features(${name}_tests PRIVATE cxx_lambdas)
     target_link_libraries(${name}_tests Threads::Threads)
-    target_link_libraries(${name}_tests nica-hls)
+    target_link_libraries(${name}_tests nica-csim)
 endfunction(add_gtest)
 
 ### Adds a new ikernel.

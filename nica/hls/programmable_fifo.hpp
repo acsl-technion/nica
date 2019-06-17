@@ -33,25 +33,55 @@ class programmable_fifo
 public:
     typedef ap_uint<index_width> index_t;
     programmable_fifo(index_t full_threshold, index_t empty_threshold = 0) :
+        _stream(),
         _pi(0), _ci(0), _full_threshold(full_threshold),
         _empty_threshold(empty_threshold),
         _empty_local_pi(0), _full_local_ci(0),
-        _pi_updates(), _ci_updates(), _stream(),
+        _pi_updates(), _ci_updates(), 
         _pi_update_flag(0), _ci_update_flag(0)
-    {
-#pragma HLS stream variable=_stream depth=stream_depth
-    }
+    { }
+
+    programmable_fifo(index_t full_threshold, index_t empty_threshold, const std::string& name) :
+        _stream(name.c_str()),
+        _pi(0), _ci(0), _full_threshold(full_threshold),
+        _empty_threshold(empty_threshold),
+        _empty_local_pi(0), _full_local_ci(0),
+        _pi_updates((name + "_pi").c_str()), _ci_updates((name + "_ci").c_str()),
+        _pi_update_flag(0), _ci_update_flag(0)
+    { }
 
     void write(const T& t) {
+#pragma HLS inline
         ++_pi;
         _pi_update_flag = 1;
         _stream.write(t);
     }
 
+    bool write_nb(const T& t) {
+#pragma HLS inline
+        if (full())
+            return false;
+        ++_pi;
+        _pi_update_flag = 1;
+        _stream.write_nb(t);
+        return true;
+    }
+
     T read() {
+#pragma HLS inline
         ++_ci;
         _ci_update_flag = 1;
         return _stream.read();
+    }
+
+    bool read_nb(T& t) {
+#pragma HLS inline
+        if (empty())
+            return false;
+        ++_ci;
+        _ci_update_flag = 1;
+        _stream.read_nb(t);
+        return true;
     }
 
     /* Empty progress must be called constantly from within the function that
@@ -59,15 +89,16 @@ public:
     void empty_progress() {
 #pragma HLS inline
         if (!_pi_updates.empty())
-            _empty_local_pi = _pi_updates.read();
-        if (!_ci_updates.full() && _ci_update_flag) {
-            _ci_updates.write(_ci);
-            _ci_update_flag = 0;
+            _pi_updates.read_nb(_empty_local_pi);
+        if (_ci_update_flag) {
+            if (_ci_updates.write_nb(_ci))
+                _ci_update_flag = 0;
         }
     }
 
     ap_uint<index_width - 1> count(index_t pi, index_t ci)
     {
+#pragma HLS inline
         return pi - ci;
     }
 
@@ -82,10 +113,10 @@ public:
     void full_progress() {
 #pragma HLS inline
         if (!_ci_updates.empty())
-            _full_local_ci = _ci_updates.read();
-        if (!_pi_updates.full() && _pi_update_flag) {
-            _pi_updates.write(_pi);
-            _pi_update_flag = 0;
+            _ci_updates.read_nb(_full_local_ci);
+        if (_pi_update_flag) {
+            if (_pi_updates.write_nb(_pi))
+                _pi_update_flag = 0;
         }
     }
 

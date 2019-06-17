@@ -133,7 +133,7 @@ public:
         memset(&s, 0, sizeof(s));
 
 #define BOOST_PP_LOCAL_MACRO(n) \
-        init(ports ## n);
+        init(tc ## n);
 #define BOOST_PP_LOCAL_LIMITS (0, NUM_IKERNELS - 1)
 %:include BOOST_PP_LOCAL_ITERATE()
 
@@ -176,7 +176,7 @@ public:
         hls_ik::ikernel_id id;
 #define BOOST_PP_LOCAL_MACRO(n) \
         if (ikernel ## n) \
-            ikernel ## n(ports ## n, id, gateway0);
+            ikernel ## n(ports ## n, id, gateway0, tc ## n);
 #define BOOST_PP_LOCAL_LIMITS (0, NUM_IKERNELS - 1)
 %:include BOOST_PP_LOCAL_ITERATE()
     }
@@ -193,6 +193,7 @@ protected:
     nica_stats s, first;
 #define BOOST_PP_LOCAL_MACRO(n) \
     hls_ik::ports ports ## n; \
+    hls_ik::tc_ikernel_data_counts tc ## n; \
     top_function ikernel ## n;
 #define BOOST_PP_LOCAL_LIMITS (0, NUM_IKERNELS - 1)
 %:include BOOST_PP_LOCAL_ITERATE()

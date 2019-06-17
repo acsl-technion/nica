@@ -30,13 +30,15 @@
 #define NUM_OF_MSGS 400
 
 typedef void (* cms_top_function)(hls_ik::ports &, hls_ik::ikernel_id &, hls_ik::virt_gateway_registers&,
-	value_and_frequency& to_heap, hls::stream<value_and_frequency>& heap_out, ap_uint<32> k_value);
+	value_and_frequency& to_heap, hls::stream<value_and_frequency>& heap_out,
+        ap_uint<32> k_value, hls_ik::tc_ikernel_data_counts& tc);
 
 namespace {
 
     class cms_ikernel_tests : public ::testing::TestWithParam<cms_top_function> {
 	protected:
 	    hls_ik::ports p;
+	    hls_ik::tc_ikernel_data_counts tc;
 	    hls_ik::ikernel_id id;
 	    hls_ik::virt_gateway_registers gateway;
 	    value_and_frequency to_heap;
@@ -47,7 +49,7 @@ namespace {
 	    ap_uint<32> k_value;
 
 	    void top() {
-		GetParam()(p, id, gateway, to_heap, heap_out, k_value);
+		GetParam()(p, id, gateway, to_heap, heap_out, k_value, tc);
 		++top_call_count;
 	    }
 

@@ -57,7 +57,7 @@ struct byte_array {
     {
         ap_uint<Bits> ret;
         for (int i = 0; i < Size; ++i)
-            ret(8 * i + 8, 8 * i) = data[i];
+            ret(8 * i + 7, 8 * i) = data[i];
         return ret;
     }
 };
@@ -116,6 +116,7 @@ public:
 
     memcached_cache() {
         // TODO initialize DRAM with valid bit = 0
+#pragma HLS stream variable=outstanding_reads depth=510
     }
 
     typedef hls_ik::memory_t memory;
@@ -125,7 +126,7 @@ public:
 #pragma HLS inline
         index_t index = h(key, log_size, ikernel_id);
 
-        m.mem[index] = entry_t(key, value, true);
+        m.write(index, entry_t(key, value, true));
     }
 
     void erase(memory& m, const memcached_key<KeySize>& k, index_t log_size, int ikernel_id)
@@ -136,14 +137,37 @@ public:
         // TODO reading the tag to check whether the existing value is actually
         // the one we want to erase causes HLS to detect a dependency and fail
         // to optimize.
-        m.mem[index] = entry_t(memcached_key<KeySize>(), memcached_value<ValueSize>(), false);
+        m.write(index, entry_t(memcached_key<KeySize>(), memcached_value<ValueSize>(), false));
     }
 
-    maybe<memcached_value<ValueSize> > find(memory& m, const memcached_key<KeySize>& k, index_t log_size, int ikernel_id) const
+    bool can_post_find(memory& m)
     {
 #pragma HLS inline
+        return !outstanding_reads.full();
+    }
+
+    void find(memory& m, const memcached_key<KeySize>& k, index_t log_size, int ikernel_id)
+    {
+#pragma HLS inline
+        if (!can_post_find(m))
+            return;
+
         index_t index = h(k, log_size, ikernel_id);
-        entry_t ent = m.mem[index];
+        m.post_read(index);
+        outstanding_reads.write(k);
+    }
+
+    bool has_find_result(memory& m)
+    {
+        return !outstanding_reads.empty() && m.has_read_response();
+    }
+
+    maybe<memcached_value<ValueSize> > get_find_result(memory& m)
+    {
+#pragma HLS inline
+        entry_t ent = m.get_read_response();
+        memcached_key<KeySize> k;
+        outstanding_reads.read_nb(k);
 
         return maybe<memcached_value<ValueSize> >(ent.valid && ent.key == k, ent.value);
     }
@@ -177,6 +201,7 @@ private:
 	    return seed;
     }
 
+    hls::stream<memcached_key<KeySize> > outstanding_reads;
 };
 
 #endif // MEMCACHEDCACHE_HPP

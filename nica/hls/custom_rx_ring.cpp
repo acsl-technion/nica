@@ -104,8 +104,8 @@ void custom_rx_ring::ring_hdrs(udp::udp_builder_metadata_stream& hdr_in, udp::ud
         bth.write(bth_flit);
         m.length += IB_BTH_BYTES + 4;
         m.ring_id = 0;
+        icrc.write(0); // TODO calc icrc
     }
-    icrc.write(0); // TODO calc icrc
     hdr_out.write(m);
 }
 

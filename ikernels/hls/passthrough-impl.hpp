@@ -30,6 +30,7 @@
 #include <gateway.hpp>
 #include <flow_table.hpp>
 #include <context_manager.hpp>
+#include <drop_or_pass.hpp>
 
 #define LOG_NUM_PASSTHROUGH_CONTEXTS 6
 #define NUM_PASSTHROUGH_CONTEXTS (1 << LOG_NUM_PASSTHROUGH_CONTEXTS)
@@ -56,14 +57,13 @@ class passthrough : public hls_ik::ikernel, public hls_ik::virt_gateway_impl<pas
 public:
     virtual int reg_write(int address, int value, hls_ik::ikernel_id_t ikernel_id);
     virtual int reg_read(int address, int* value, hls_ik::ikernel_id_t ikernel_id);
-    virtual void step(hls_ik::ports& p);
+    virtual void step(hls_ik::ports& p, hls_ik::tc_ikernel_data_counts& tc);
 protected:
     enum { DECISION, STREAM } _state;
 
     hls::stream<bool> _decisions;
-    bool _action;
-    void intercept_in(hls_ik::pipeline_ports& p);
-    void drop_or_pass(hls_ik::pipeline_ports& p);
+    drop_or_pass dropper;
+    void intercept_in(hls_ik::pipeline_ports& p, hls_ik::tc_pipeline_data_counts& tc);
     passthrough_contexts contexts;
 };
 

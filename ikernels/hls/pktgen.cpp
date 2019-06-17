@@ -36,10 +36,11 @@ pktgen::pktgen() :
 {
 }
 
-void pktgen::step(hls_ik::ports& p)
+void pktgen::step(hls_ik::ports& p, hls_ik::tc_ikernel_data_counts& tc)
 {
 #pragma HLS inline
-    data_plane(p.host);
+    memory_unused(p.mem, dummy_update);
+    data_plane(p.host, tc.host);
     sched_wrapper();
     pass_packets(p.net);
     ikernel::update();
@@ -83,11 +84,12 @@ void pktgen::sched_wrapper()
     }
 }
 
-void pktgen::check_quantum_complete(hls_ik::pipeline_ports& p)
+void pktgen::check_quantum_complete(hls_ik::pipeline_ports& p,
+                                    hls_ik::tc_pipeline_data_counts& tc)
 {
 #pragma HLS inline
     if (context.data_length <= quota && context.cur_packet &&
-        can_transmit(p, context.metadata.ikernel_id, 0, context.data_length << 5, NET)) {
+        can_transmit(tc, context.metadata.ikernel_id, 0, context.data_length << 5, NET)) {
         data_offset = 0;
         state = DUPLICATE;
     } else {
@@ -97,7 +99,8 @@ void pktgen::check_quantum_complete(hls_ik::pipeline_ports& p)
     }
 }
 
-void pktgen::data_plane(hls_ik::pipeline_ports& p)
+void pktgen::data_plane(hls_ik::pipeline_ports& p,
+                        hls_ik::tc_pipeline_data_counts& tc)
 {
 #pragma HLS pipeline enable_flush ii=1
     switch (state) {
@@ -113,7 +116,7 @@ void pktgen::data_plane(hls_ik::pipeline_ports& p)
 
         if (!transmit_commands.empty()) {
             std::tie(context, quota) = transmit_commands.read();
-            check_quantum_complete(p);
+            check_quantum_complete(p, tc);
         }
         break;
     }
@@ -148,7 +151,7 @@ duplicate:
         p.data_output.write(data[context.metadata.ikernel_id][data_offset]);
         if (++data_offset >= context.data_length) {
             quota -= context.data_length;
-            check_quantum_complete(p);
+            check_quantum_complete(p, tc);
         }
         break;
     }

@@ -17,8 +17,11 @@ if [ $# -gt 3 ] ; then
 	burst_size=$4
 fi
 
-
-libvma_dir=$basedir/../../../libvma/src/vma/.libs
+libvma_dirs=($(readlink -f $basedir/../../../libvma/src/vma/.libs) $(readlink -f $basedir/../../libvma/src/vma/.libs))
+if [[ "${#libvma_dirs}" -eq 0 ]] ; then
+    echo "Error: couldn't find libvma dir."
+fi
+libvma_dir=${libvma_dirs[0]}
 client=$basedir/../build/baseline/client
 # Find an mlx5_core netdev
 dev=$($basedir/mlx_netdev.sh)
@@ -28,7 +31,9 @@ remote_ip=192.168.0.8
 cmd="LD_PRELOAD=libvma.so LD_LIBRARY_PATH=$libvma_dir $client -c $number_of_packets -I $dev -H $remote_ip -p 1111 -l $local_ip -s $payload_size"
 
 if [ $offload == TRUE ] ; then
+	echo env VMA_RX_NO_CSUM=1 VMA_NICA_ACCESS_MODE=0 $cmd --offload -b $burst_size
 	sudo env VMA_RX_NO_CSUM=1 VMA_NICA_ACCESS_MODE=0 $cmd --offload -b $burst_size
 else 
+	echo $cmd
 	sudo env $cmd
 fi
