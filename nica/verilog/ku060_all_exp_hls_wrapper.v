@@ -216,41 +216,39 @@ input          cxp2sbu_lossless_has_credits;
     AXILITE_TIMEOUT = 32'd100;  // Max 100 clocks are allowed for an axilite slave to respond to read/write, after which the axilite_timeout_slave will respond
   
   localparam CONST_ZERO = 1'b0;
-  localparam METADATA_WIDTH = 255;
-
-  wire [METADATA_WIDTH:0] ik0_host_metadata_input_V_V_TDATA;
+  wire [255:0] ik0_host_metadata_input_V_V_TDATA;
   wire [295:0] ik0_host_data_input_V_V_TDATA;
-  wire [METADATA_WIDTH:0] ik0_host_metadata_output_V_V_TDATA;
+  wire [255:0] ik0_host_metadata_output_V_V_TDATA;
   wire [295:0] ik0_host_data_output_V_V_TDATA;
-  wire [METADATA_WIDTH:0] ik0_net_metadata_input_V_V_TDATA;
+  wire [255:0] ik0_net_metadata_input_V_V_TDATA;
   wire [295:0] ik0_net_data_input_V_V_TDATA;
-  wire [METADATA_WIDTH:0] ik0_net_metadata_output_V_V_TDATA;
+  wire [255:0] ik0_net_metadata_output_V_V_TDATA;
   wire [295:0] ik0_net_data_output_V_V_TDATA;
-  wire [METADATA_WIDTH:0] ik1_host_metadata_input_V_V_TDATA;
+  wire [255:0] ik1_host_metadata_input_V_V_TDATA;
   wire [295:0] ik1_host_data_input_V_V_TDATA;
-  wire [METADATA_WIDTH:0] ik1_host_metadata_output_V_V_TDATA;
+  wire [255:0] ik1_host_metadata_output_V_V_TDATA;
   wire [295:0] ik1_host_data_output_V_V_TDATA;
-  wire [METADATA_WIDTH:0] ik1_net_metadata_input_V_V_TDATA;
+  wire [255:0] ik1_net_metadata_input_V_V_TDATA;
   wire [295:0] ik1_net_data_input_V_V_TDATA;
-  wire [METADATA_WIDTH:0] ik1_net_metadata_output_V_V_TDATA;
+  wire [255:0] ik1_net_metadata_output_V_V_TDATA;
   wire [295:0] ik1_net_data_output_V_V_TDATA;
-  wire [METADATA_WIDTH:0] ik2_host_metadata_input_V_V_TDATA;
+  wire [255:0] ik2_host_metadata_input_V_V_TDATA;
   wire [295:0] ik2_host_data_input_V_V_TDATA;
-  wire [METADATA_WIDTH:0] ik2_host_metadata_output_V_V_TDATA;
+  wire [255:0] ik2_host_metadata_output_V_V_TDATA;
   wire [295:0] ik2_host_data_output_V_V_TDATA;
-  wire [METADATA_WIDTH:0] ik2_net_metadata_input_V_V_TDATA;
+  wire [255:0] ik2_net_metadata_input_V_V_TDATA;
   wire [295:0] ik2_net_data_input_V_V_TDATA;
-  wire [METADATA_WIDTH:0] ik2_net_metadata_output_V_V_TDATA;
+  wire [255:0] ik2_net_metadata_output_V_V_TDATA;
   wire [295:0] ik2_net_data_output_V_V_TDATA;
   wire [295:0] ik2_control_ikernel2host_V_V_TDATA;
   wire [295:0] ik2_control_host2ikernel_V_V_TDATA;
-  wire [METADATA_WIDTH:0] ik3_host_metadata_input_V_V_TDATA;
+  wire [255:0] ik3_host_metadata_input_V_V_TDATA;
   wire [295:0] ik3_host_data_input_V_V_TDATA;
-  wire [METADATA_WIDTH:0] ik3_host_metadata_output_V_V_TDATA;
+  wire [255:0] ik3_host_metadata_output_V_V_TDATA;
   wire [295:0] ik3_host_data_output_V_V_TDATA;
-  wire [METADATA_WIDTH:0] ik3_net_metadata_input_V_V_TDATA;
+  wire [255:0] ik3_net_metadata_input_V_V_TDATA;
   wire [295:0] ik3_net_data_input_V_V_TDATA;
-  wire [METADATA_WIDTH:0] ik3_net_metadata_output_V_V_TDATA;
+  wire [255:0] ik3_net_metadata_output_V_V_TDATA;
   wire [295:0] ik3_net_data_output_V_V_TDATA;
   wire [295:0] ik3_control_ikernel2host_V_V_TDATA;
   wire [295:0] ik3_control_host2ikernel_V_V_TDATA;
@@ -408,33 +406,31 @@ input          cxp2sbu_lossless_has_credits;
 
   wire 	      ik2map_axi4mm_aw_vld;
   wire 	      ik2map_axi4mm_aw_rdy;
-  wire [2:0]  ik2map_axi4mm_aw_id = 0;
-  wire [7:0]  ik2map_axi4mm_aw_len = 0;
-  wire [2:0]  ik2map_axi4mm_aw_size = 3'd6;
-  wire [1:0]  ik2map_axi4mm_aw_burst = 2'b01;
-  wire [1:0]  ik2map_axi4mm_aw_lock = 0;
-  wire [3:0]  ik2map_axi4mm_aw_cache = 0;
-  wire [2:0]  ik2map_axi4mm_aw_prot = 0;
-  wire [3:0]  ik2map_axi4mm_aw_qos = 0;
-  wire [3:0]  ik2map_axi4mm_aw_region = 0;
+  wire [2:0]  ik2map_axi4mm_aw_id;
+  wire [7:0]  ik2map_axi4mm_aw_len;
+  wire [2:0]  ik2map_axi4mm_aw_size;
+  wire [1:0]  ik2map_axi4mm_aw_burst;
+  wire [1:0]  ik2map_axi4mm_aw_lock;
+  wire [3:0]  ik2map_axi4mm_aw_cache;
+  wire [2:0]  ik2map_axi4mm_aw_prot;
+  wire [3:0]  ik2map_axi4mm_aw_qos;
+  wire [3:0]  ik2map_axi4mm_aw_region;
   wire 	      ik2map_axi4mm_ar_vld;
   wire 	      ik2map_axi4mm_ar_rdy;
-  wire [2:0]  ik2map_axi4mm_ar_id = 0;
-  wire [7:0]  ik2map_axi4mm_ar_len = 0;
-  wire [2:0]  ik2map_axi4mm_ar_size = 3'd6;
-  wire [1:0]  ik2map_axi4mm_ar_burst = 2'b01;
-  wire [1:0]  ik2map_axi4mm_ar_lock = 0;
-  wire [3:0]  ik2map_axi4mm_ar_cache = 0;
-  wire [2:0]  ik2map_axi4mm_ar_prot = 0;
-  wire [3:0]  ik2map_axi4mm_ar_qos = 0;
-  wire [3:0]  ik2map_axi4mm_ar_region = 0;
+  wire [2:0]  ik2map_axi4mm_ar_id;
+  wire [7:0]  ik2map_axi4mm_ar_len;
+  wire [2:0]  ik2map_axi4mm_ar_size;
+  wire [1:0]  ik2map_axi4mm_ar_burst;
+  wire [1:0]  ik2map_axi4mm_ar_lock;
+  wire [3:0]  ik2map_axi4mm_ar_cache;
+  wire [2:0]  ik2map_axi4mm_ar_prot;
+  wire [3:0]  ik2map_axi4mm_ar_qos;
+  wire [3:0]  ik2map_axi4mm_ar_region;
 
   wire [1:0]  sbu2mlx_axi4mm_aw_lock_axi3;
   wire [1:0]  sbu2mlx_axi4mm_ar_lock_axi3;
 
   
-  assign ik2map_axi4mm_aw_addr[5:0] = 0;
-  assign ik2map_axi4mm_ar_addr[5:0] = 0;
   assign sbu2mlx_axi4mm_aw_addr = {32'h00000004, sbu2mlx_axi4mm_aw_addr_low};
   assign sbu2mlx_axi4mm_ar_addr = {32'h00000004, sbu2mlx_axi4mm_ar_addr_low};
 
@@ -460,35 +456,32 @@ input          cxp2sbu_lossless_has_credits;
 
 `define NUM_TC 3
 
-  localparam TC_FIFO_METADATA_WIDTH = 249;
-  localparam TC_FIFO_DATA_WIDTH = 288;
-
-  wire [TC_FIFO_METADATA_WIDTH:0] h2n_tc_meta_din[`NUM_TC:0];
-  wire [TC_FIFO_METADATA_WIDTH:0] h2n_tc_meta_dout[`NUM_TC:0];
+  wire [265:0] h2n_tc_meta_din[`NUM_TC:0];
+  wire [265:0] h2n_tc_meta_dout[`NUM_TC:0];
   wire         h2n_tc_meta_full[`NUM_TC:0];
   wire         h2n_tc_meta_empty[`NUM_TC:0];
   wire         h2n_tc_meta_read[`NUM_TC:0];
   wire         h2n_tc_meta_write[`NUM_TC:0];
   wire [9:0]   h2n_tc_meta_count[`NUM_TC:0];
 
-  wire [TC_FIFO_DATA_WIDTH:0] h2n_tc_data_din[`NUM_TC:0];
-  wire [TC_FIFO_DATA_WIDTH:0] h2n_tc_data_dout[`NUM_TC:0];
+  wire [288:0] h2n_tc_data_din[`NUM_TC:0];
+  wire [288:0] h2n_tc_data_dout[`NUM_TC:0];
   wire         h2n_tc_data_full[`NUM_TC:0];
   wire         h2n_tc_data_empty[`NUM_TC:0];
   wire         h2n_tc_data_read[`NUM_TC:0];
   wire         h2n_tc_data_write[`NUM_TC:0];
   wire [9:0]   h2n_tc_data_count[`NUM_TC:0];
 
-  wire [TC_FIFO_METADATA_WIDTH:0] n2h_tc_meta_din[`NUM_TC:0];
-  wire [TC_FIFO_METADATA_WIDTH:0] n2h_tc_meta_dout[`NUM_TC:0];
+  wire [265:0] n2h_tc_meta_din[`NUM_TC:0];
+  wire [265:0] n2h_tc_meta_dout[`NUM_TC:0];
   wire         n2h_tc_meta_full[`NUM_TC:0];
   wire         n2h_tc_meta_empty[`NUM_TC:0];
   wire         n2h_tc_meta_read[`NUM_TC:0];
   wire         n2h_tc_meta_write[`NUM_TC:0];
   wire [9:0]   n2h_tc_meta_count[`NUM_TC:0];
 
-  wire [TC_FIFO_DATA_WIDTH:0] n2h_tc_data_din[`NUM_TC:0];
-  wire [TC_FIFO_DATA_WIDTH:0] n2h_tc_data_dout[`NUM_TC:0];
+  wire [288:0] n2h_tc_data_din[`NUM_TC:0];
+  wire [288:0] n2h_tc_data_dout[`NUM_TC:0];
   wire         n2h_tc_data_full[`NUM_TC:0];
   wire         n2h_tc_data_empty[`NUM_TC:0];
   wire         n2h_tc_data_read[`NUM_TC:0];
@@ -528,7 +521,7 @@ generate
       .empty(h2n_tc_data_empty[i]),
       .data_count(h2n_tc_data_count[i])
     );
-    tc_meta_512 h2n_tc_meta0 (
+    tc_meta_512x266b h2n_tc_meta0 (
       .clk(mlx2sbu_clk),
       .srst(mlx2sbu_reset),
 
@@ -553,7 +546,7 @@ generate
       .empty(n2h_tc_data_empty[i]),
       .data_count(n2h_tc_data_count[i])
     );
-    tc_meta_512 n2h_tc_meta0 (
+    tc_meta_512x266b n2h_tc_meta0 (
       .clk(mlx2sbu_clk),
       .srst(mlx2sbu_reset),
 
@@ -851,7 +844,9 @@ endgenerate
 
 `ADD_TOP(`IKERNEL0) #(
     .C_S_AXI_AXILITES_ADDR_WIDTH(32),
-    .C_S_AXI_AXILITES_DATA_WIDTH(32)
+    .C_S_AXI_AXILITES_DATA_WIDTH(32),
+    .C_M_AXI_IK_MEM_MEM_V_ID_WIDTH(3),
+    .C_M_AXI_IK_MEM_MEM_V_CACHE_VALUE(0)
 ) ikernel0 (
 
     .s_axi_AXILiteS_AWREADY(ik0_AXILiteS_AWREADY),
@@ -914,26 +909,55 @@ endgenerate
     .ik_net_data_input_V_V_TREADY(ik0_net_data_input_V_V_TREADY),
 
 //DRAM interface:
-    .ik_mem_aw_V_V_TVALID(ik2map_axi4mm_aw_vld),
-    .ik_mem_aw_V_V_TREADY(ik2map_axi4mm_aw_rdy),
-    .ik_mem_aw_V_V_TDATA(ik2map_axi4mm_aw_addr[45:6]),
+    .m_axi_ik_mem_mem_V_AWVALID(ik2map_axi4mm_aw_vld),
+    .m_axi_ik_mem_mem_V_AWREADY(ik2map_axi4mm_aw_rdy),
+    .m_axi_ik_mem_mem_V_AWADDR(ik2map_axi4mm_aw_addr),
+    .m_axi_ik_mem_mem_V_AWID(ik2map_axi4mm_aw_id),
+    .m_axi_ik_mem_mem_V_AWLEN(ik2map_axi4mm_aw_len),
+    .m_axi_ik_mem_mem_V_AWSIZE(ik2map_axi4mm_aw_size),
+    .m_axi_ik_mem_mem_V_AWBURST(ik2map_axi4mm_aw_burst),
+    .m_axi_ik_mem_mem_V_AWLOCK(ik2map_axi4mm_aw_lock),
+    .m_axi_ik_mem_mem_V_AWCACHE(ik2map_axi4mm_aw_cache),
+    .m_axi_ik_mem_mem_V_AWPROT(ik2map_axi4mm_aw_prot),
+    .m_axi_ik_mem_mem_V_AWQOS(ik2map_axi4mm_aw_qos),
+    .m_axi_ik_mem_mem_V_AWREGION(ik2map_axi4mm_aw_region),
+    .m_axi_ik_mem_mem_V_AWUSER(not_connected_mem_mem_V_AWUSER),
 
-    .ik_mem_w_V_V_TVALID(sbu2mlx_axi4mm_w_vld),
-    .ik_mem_w_V_V_TREADY(sbu2mlx_axi4mm_w_rdy),
-    .ik_mem_w_V_V_TDATA(sbu2mlx_axi4mm_w_data),
+    .m_axi_ik_mem_mem_V_WVALID(sbu2mlx_axi4mm_w_vld),
+    .m_axi_ik_mem_mem_V_WREADY(sbu2mlx_axi4mm_w_rdy),
+    .m_axi_ik_mem_mem_V_WDATA(sbu2mlx_axi4mm_w_data),
+    .m_axi_ik_mem_mem_V_WSTRB(sbu2mlx_axi4mm_w_strobe),
+    .m_axi_ik_mem_mem_V_WLAST(sbu2mlx_axi4mm_w_last),
+    .m_axi_ik_mem_mem_V_WID(not_connected_mem_mem_V_WID),
+    .m_axi_ik_mem_mem_V_WUSER(not_connected_mem_mem_V_WUSER),
 
-    .ik_mem_b_V_TREADY(sbu2mlx_axi4mm_b_rdy),
-    .ik_mem_b_V_TVALID(sbu2mlx_axi4mm_b_vld),
-    .ik_mem_b_V_TDATA({7'b0, ~|sbu2mlx_axi4mm_b_resp}),
+    .m_axi_ik_mem_mem_V_BREADY(sbu2mlx_axi4mm_b_rdy),
+    .m_axi_ik_mem_mem_V_BVALID(sbu2mlx_axi4mm_b_vld),
+    .m_axi_ik_mem_mem_V_BRESP(sbu2mlx_axi4mm_b_resp),
+    .m_axi_ik_mem_mem_V_BID(sbu2mlx_axi4mm_b_id),
+    .m_axi_ik_mem_mem_V_BUSER(not_connected_mem_mem_V_BUSER),
 
-    .ik_mem_ar_V_V_TVALID(ik2map_axi4mm_ar_vld),
-    .ik_mem_ar_V_V_TREADY(ik2map_axi4mm_ar_rdy),
-    .ik_mem_ar_V_V_TDATA(ik2map_axi4mm_ar_addr[45:6]),
+    .m_axi_ik_mem_mem_V_ARVALID(ik2map_axi4mm_ar_vld),
+    .m_axi_ik_mem_mem_V_ARREADY(ik2map_axi4mm_ar_rdy),
+    .m_axi_ik_mem_mem_V_ARADDR(ik2map_axi4mm_ar_addr),
+    .m_axi_ik_mem_mem_V_ARID(ik2map_axi4mm_ar_id),
+    .m_axi_ik_mem_mem_V_ARLEN(ik2map_axi4mm_ar_len),
+    .m_axi_ik_mem_mem_V_ARSIZE(ik2map_axi4mm_ar_size),
+    .m_axi_ik_mem_mem_V_ARBURST(ik2map_axi4mm_ar_burst),
+    .m_axi_ik_mem_mem_V_ARLOCK(ik2map_axi4mm_ar_lock),
+    .m_axi_ik_mem_mem_V_ARCACHE(ik2map_axi4mm_ar_cache),
+    .m_axi_ik_mem_mem_V_ARPROT(ik2map_axi4mm_ar_prot),
+    .m_axi_ik_mem_mem_V_ARQOS(ik2map_axi4mm_ar_qos),
+    .m_axi_ik_mem_mem_V_ARREGION(ik2map_axi4mm_ar_region),
+    .m_axi_ik_mem_mem_V_ARUSER(not_connected_mem_mem_V_ARUSER),
 
-    .ik_mem_r_V_V_TVALID(sbu2mlx_axi4mm_r_vld),
-    .ik_mem_r_V_V_TREADY(sbu2mlx_axi4mm_r_rdy),
-    .ik_mem_r_V_V_TDATA(sbu2mlx_axi4mm_r_data),
-
+    .m_axi_ik_mem_mem_V_RVALID(sbu2mlx_axi4mm_r_vld),
+    .m_axi_ik_mem_mem_V_RREADY(sbu2mlx_axi4mm_r_rdy),
+    .m_axi_ik_mem_mem_V_RDATA(sbu2mlx_axi4mm_r_data),
+    .m_axi_ik_mem_mem_V_RLAST(sbu2mlx_axi4mm_r_last),
+    .m_axi_ik_mem_mem_V_RID(sbu2mlx_axi4mm_r_id),
+    .m_axi_ik_mem_mem_V_RRESP(sbu2mlx_axi4mm_r_resp),
+    .m_axi_ik_mem_mem_V_RUSER(not_connected_mem_mem_V_RUSER),
         .ik_events_0_V(ikernel_event0),
         .ik_events_1_V(ikernel_event1),
         .ik_events_2_V(ikernel_event2),
@@ -948,9 +972,6 @@ endgenerate
     .tc_host_tc_data_counts_V(h2n_tc_data_counts),
     .tc_host_tc_meta_counts_V(h2n_tc_meta_counts)
 );
-
-assign sbu2mlx_axi4mm_w_strobe = 64'hffffffff_ffffffff;
-assign sbu2mlx_axi4mm_w_last = 1'b1;
 
 `ifdef NUM_IKERNELS_GT_1
 `ADD_TOP(`IKERNEL1) #(
@@ -1664,6 +1685,12 @@ sigmon_top #(
     .ik2map_axi4mm_ar_vld_in(ik2map_axi4mm_ar_vld),
     .axi4mm_ar_rdy_in(sbu2mlx_axi4mm_ar_rdy),
     .axi4mm_ar_vld_in(sbu2mlx_axi4mm_ar_vld),
+
+    .ik2map_axi4mm_aw_addr_in(ik2map_axi4mm_aw_addr),
+    .ik2map_axi4mm_ar_addr_in(ik2map_axi4mm_ar_addr),
+    .sbu2mlx_axi4mm_aw_addr_in(sbu2mlx_axi4mm_aw_addr_low),
+    .sbu2mlx_axi4mm_ar_addr_in(sbu2mlx_axi4mm_ar_addr_low),
+	  
     .axi4mm_r_rdy_in(sbu2mlx_axi4mm_r_rdy),
     .axi4mm_r_vld_in(sbu2mlx_axi4mm_r_vld),
     .axi4mm_r_last_in(sbu2mlx_axi4mm_r_last),

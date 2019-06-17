@@ -116,7 +116,7 @@ public:
 
     enum { META_IDLE, NEW_PACKET } meta_state;
     typedef std::tuple<udp::udp_builder_metadata, index_t> data_status_t;
-    hls::stream<index_t> meta_to_data;
+    hls::stream<data_status_t> meta_to_data;
 
     void tx_meta(tc_ports& tc, udp::udp_builder_metadata_stream& metadata_out,
                  trace_event events[4])
@@ -138,16 +138,16 @@ public:
                 break;
 
             auto decision = scheduler_decision.read();
-            meta_selected_port = decision.port;
+            selected_port = decision.port;
             quota = decision.quantum;
 
-            assert(meta_selected_port < NUM_TC);
+            assert(selected_port < NUM_TC);
             // Make sure only 0-2 are accessed
-            switch (meta_selected_port) {
+            switch (selected_port) {
             case 0:
             case 1:
             case 2:
-                events[meta_selected_port] = 1;
+                events[selected_port] = 1;
                 break;
             default:
                 break;
@@ -161,20 +161,20 @@ public:
                 break;
 
             uint32_t len;
-            bool non_empty = peek_stream_packet_length(meta_selected_port, &len);
+            bool non_empty = peek_stream_packet_length(selected_port, &len);
 
             if (non_empty && len <= quota) {
                 quota -= len; // TODO more accurate packet length
-                assert(!empty_metadata(meta_selected_port));
-                udp::udp_builder_metadata m = read_metadata(meta_selected_port);
+                assert(!empty_metadata(selected_port));
+                udp::udp_builder_metadata m = read_metadata(selected_port);
                 if (!m.empty_packet())
-                    meta_to_data.write_nb(meta_selected_port);
+                    meta_to_data.write_nb(std::make_tuple(m, selected_port));
                 metadata_out.write_nb(m);
             } else {
                 events[TRACE_ARBITER_EVICTED] = 1;
                 meta_state = META_IDLE;
-                interrupt_sent(meta_selected_port, meta_selected_port) = 0;
-                sched.update_flow(meta_selected_port, non_empty, quota);
+                interrupt_sent(selected_port, selected_port) = 0;
+                sched.update_flow(selected_port, non_empty, quota);
                 return;
             }
             break;
@@ -183,7 +183,7 @@ public:
     }
 
     enum { DATA_IDLE, DATA_STREAM } data_state;
-    index_t data_selected_port;
+    data_status_t data_status;
 
     void tx_data(tc_ports& tc, arbiter_stats<NUM_TC>* s, stream& out)
     {
@@ -196,7 +196,7 @@ public:
 
         switch (data_state) {
         case DATA_IDLE: {
-            if (!meta_to_data.read_nb(data_selected_port))
+            if (!meta_to_data.read_nb(data_status))
                 break;
 
             data_state = DATA_STREAM;
@@ -210,7 +210,8 @@ public:
                 break;
 
             ap_uint<hls_ik::axi_data::width> raw_word;
-            switch (data_selected_port) {
+            index_t selected_port = std::get<1>(data_status);
+            switch (selected_port) {
 #define BOOST_PP_LOCAL_MACRO(i) \
             case i: \
                 if (!(tc.data ## i).read_nb(raw_word)) \
@@ -221,7 +222,7 @@ public:
             }
             out.write_nb(raw_word);
 
-            auto& p = stats.tx_port[data_selected_port];
+            auto& p = stats.tx_port[selected_port];
             ++p.words;
             hls_ik::axi_data word = raw_word;
             if (word.last) {
@@ -315,7 +316,7 @@ private:
     port_bitmap_t interrupt_sent;
 
     index_t last_stream;
-    index_t meta_selected_port;
+    index_t selected_port;
     struct scheduler_cmd {
         index_t port;
         uint32_t quantum;

@@ -5,14 +5,16 @@ def VIVADO_ENV=". ${VIVADO}/settings64.sh ;"
 
 node {
     def DEFAULT_BUILD_NUM = 'latest'
-    def ikernels = ['threshold', 'passthrough', 'pktgen', 'echo', 'cms', 'memcached'].join('\n')
+    def ikernels = [ 'threshold', 'passthrough', 'pktgen', 'echo', 'cms', 'memcached', 'coap' ].join('\n')
     properties ([parameters([
         string(name: 'BUILD_NUM',         defaultValue: DEFAULT_BUILD_NUM, description: 'netperf-hw build number'),
         string(name: 'NETPERF_HW_BRANCH', defaultValue: env.BRANCH_NAME,   description: 'netperf-hw branch name'),
         choice(name: 'NUM_IKERNELS', description: 'number of ikernels to use', choices: '1\n2'),
         choice(name: 'IKERNEL0', description: 'first ikernel to use',  choices: ikernels),
         choice(name: 'IKERNEL1', description: 'second ikernel to use', choices: ikernels),
-        booleanParam(name: 'SIGMON_ENABLE', description: 'Enable signal monitoring infrastructure', defaultValue: true)
+        booleanParam(name: 'SIGMON_ENABLE', description: 'Enable signal monitoring infrastructure', defaultValue: true),
+        string(name: 'FIRST_SHA_UNITS', defaultValue: '3',   description: 'Number of SHA256 units for coap AFU first step'),
+        string(name: 'SECOND_SHA_UNITS', defaultValue: '2',   description: 'Number of SHA256 units for coap AFU second step'),
     ])])
 
     def buildNumber;
@@ -27,6 +29,9 @@ Will attempt to run against the latest build of netperf-hw/master.
         buildNumber = DEFAULT_BUILD_NUM
     }
     currentBuild.description = "${params.IKERNEL0}, $buildNumber"
+    if (params.IKERNEL0 == "coap") {
+        currentBuild.description += " # of sha256 units: ${params.FIRST_SHA_UNITS}/${params.SECOND_SHA_UNITS}"
+    }
 
     if (buildNumber.toLowerCase() == "latest") {
         selector = LAST_COMPLETED_BUILD_SELSECTOR;
@@ -72,7 +77,9 @@ Will attempt to run against the latest build of netperf-hw/master.
     withEnv(["IKERNEL0=${params.IKERNEL0}",
              "IKERNEL1=${params.IKERNEL1}",
              "NUM_IKERNELS=${params.NUM_IKERNELS}",
-             "SIGMON_ENABLE=${params.SIGMON_ENABLE ? 1 : 0}"]) {
+             "SIGMON_ENABLE=${params.SIGMON_ENABLE ? 1 : 0}",
+             "FIRST_SHA_UNITS=${params.FIRST_SHA_UNITS}",
+             "SECOND_SHA_UNITS=${params.SECOND_SHA_UNITS}"]) {
         // TODO fix testbench with the external SDK file
         // stage('Simulation') {
         //     dir('tb/exp_vlog') {

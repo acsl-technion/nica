@@ -25,7 +25,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-def ikernels=['passthrough', 'threshold', 'cms', 'pktgen', 'echo', 'memcached']
+def ikernels=['passthrough', 'threshold', 'cms', 'pktgen', 'echo', 'memcached', 'coap']
+
+// shorter builds in coap - we are in a hurry
+if (env.BRANCH_NAME in ['coap', 'coap-timing-constraint']) {
+    // threshold for sanity
+    ikernels=['coap', 'threshold']
+}
+
+// For which ikernels to disable RTL/C co-sim
+def ikernels_disable_cosim = [ 'coap' ]
 
 properties ([parameters([
     choice(name: 'VIVADO_VERSION',
@@ -155,18 +164,14 @@ node {
         ikernels: {
             for (ikernel in ikernels) {
                 stage(ikernel) {
-                    hls('build/ikernels', ikernel, true)
+                    hls('build/ikernels', ikernel,
+                        !(ikernel in ikernels_disable_cosim))
                 }
             }
         }
     ]
     currentBuild.result = 'SUCCESS'
     parallel branches
-
-    // cleanup
-    dir('nica/build') {
-        sh "find -maxdepth 4 -name .autopilot -exec rm -r '{}' ';'"
-    }
 }
 
 // Choose the ikernel to build based on the branch name
@@ -176,25 +181,23 @@ def getBuildIkernel(branchName) {
         'pktgen': 'pktgen',
         'memcached-cr': 'memcached',
         'memcached-ddr': 'memcached',
-        'async-memory': 'memcached',
-        'echo': 'echo'
+        'echo': 'echo',
+        'coap': 'coap',
+        'coap-timing-constraint': 'coap',
     ].withDefault { key -> 'threshold' }
 
     return buildIkernel[branchName]
 }
 
-// Choose the netperf-verilog branch to based on the nica branch name
-@NonCPS
-def getSimulationBranch(branchName) {
-    def simulationBranch = [
-        'memcached-cr': 'memcached-ddr',
-        'memcached-ddr': 'memcached-ddr'].withDefault { key -> 'master' }
+def simulationBranch = [
+    'master': 'master',
+    'memcached-cr': 'memcached-ddr',
+    'memcached-ddr': 'memcached-ddr',
+    'coap-timing-constraint': 'coap-timing-constraint',
+]
 
-    return simulationBranch[branchName]
-}
-
-if (env.BRANCH_NAME == 'master' && currentBuild.result == 'SUCCESS') {
-    build job: "netperf-verilog/${getSimulationBranch(env.BRANCH_NAME)}", parameters: [
+if (env.BRANCH_NAME in simulationBranch && currentBuild.result == 'SUCCESS') {
+    build job: "netperf-verilog/${simulationBranch[env.BRANCH_NAME]}", parameters: [
         string(name: 'BUILD_NUM', value: env.BUILD_NUMBER),
         string(name: 'NETPERF_HW_BRANCH', value: env.BRANCH_NAME),
         string(name: 'IKERNEL0', value: getBuildIkernel(env.BRANCH_NAME))

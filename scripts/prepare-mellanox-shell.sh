@@ -45,11 +45,15 @@ patch -p1 -d user < ../scripts/mellanox-shell-scripts.patch
 ln -snf examples/exp_hls user/sources
 
 ln -snf ../../../../nica/nica/40Gbps/impl/ip/hdl/verilog user/examples/exp_hls/vlog/nica
-for ikernel in cms echo memcached passthrough pktgen threshold ; do
+for ikernel in cms echo memcached passthrough pktgen threshold coap ; do
   ln -snf ../../../../ikernels/$ikernel/40Gbps/impl/ip/hdl/verilog user/examples/exp_hls/vlog/$ikernel
 done
 
 ln -snf ../../../../nica/xci user/examples/exp_hls/xci
 cd user/examples/exp_hls/vlog
 cp -sf ../../../../../nica/verilog/* .
+cd -
+
+cd user/examples/exp_hls/xdc
+cp -sf ../../../../../ikernels/xdc/* .
 cd -

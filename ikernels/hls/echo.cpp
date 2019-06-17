@@ -91,7 +91,6 @@ void echo::echo_pipeline(hls_ik::ports& p, hls_ik::tc_ikernel_data_counts& tc) {
 
 void echo::step(hls_ik::ports& p, hls_ik::tc_ikernel_data_counts& tc) {
 #pragma HLS inline
-    memory_unused(p.mem, dummy_update);
     echo_pipeline(p, tc);
 
     ikernel::update();
@@ -99,11 +98,7 @@ void echo::step(hls_ik::ports& p, hls_ik::tc_ikernel_data_counts& tc) {
     // TODO: passthrough or drop the host traffic; merge with action stream
     // from the echo_pipeline.
     dummy_produce_consume: {
-        bool dummy;
-
-        port_dummy_update.write_nb(false);
-        port_dummy_update.read_nb(dummy);
-
+        dummy_update.read_nb(dummy);
         consume(p.host.metadata_input, dummy);
         consume(p.host.data_input, dummy);
         produce(p.net.metadata_output, dummy);
@@ -121,6 +116,13 @@ int echo::reg_write(int address, int value, ikernel_id_t ikernel_id)
 	respond_to_sockperf_cache = value;
         respond_to_sockperf_update.write(value);
 	return 0;
+    case ECHO_DUMMY:
+        if (dummy_update.full())
+            return GW_BUSY;
+
+        dummy_cache = value;
+        dummy_update.write_nb(value);
+        return GW_DONE;
     }
 
     return GW_FAIL;
@@ -134,6 +136,9 @@ int echo::reg_read(int address, int* value, ikernel_id_t ikernel_id)
     case ECHO_RESPOND_TO_SOCKPERF:
 	*value = respond_to_sockperf_cache;
 	return 0;
+    case ECHO_DUMMY:
+        *value = dummy_cache;
+        return GW_DONE;
     default:
         *value = -1;
         return GW_FAIL;

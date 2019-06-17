@@ -305,60 +305,12 @@ class memory {
 public:
     enum {
         interface_width = _interface_width,
+        array_size = 1ull << (interface_width - 6),
     };
-    typedef ap_uint<512> value_t;
-    typedef ap_uint<interface_width - 6> index_t;
-
-    /* TODO pass other auxilary signals */
-
-    hls::stream<index_t> ar;
-    hls::stream<value_t> r;
-    hls::stream<index_t> aw;
-    hls::stream<value_t> w;
-    hls::stream<bool> b;
-
-    void write(index_t index, value_t value)
-    {
-#pragma HLS inline
-        aw.write(index);
-        w.write(value);
-    }
-
-    void post_read(index_t index)
-    {
-#pragma HLS inline
-        ar.write(index);
-    }
-
-    bool has_write_response()
-    {
-#pragma HLS inline
-        return !b.empty();
-    }
-
-    bool get_write_response()
-    {
-#pragma HLS inline
-        return b.read();
-    }
-
-    bool has_read_response()
-    {
-#pragma HLS inline
-        return !r.empty();
-    }
-
-    value_t get_read_response()
-    {
-#pragma HLS inline
-        return r.read();
-    }
+    ap_uint<512> mem[array_size];
 };
 
 typedef memory<DDR_INTERFACE_WIDTH> memory_t;
-
-/* Convince HLS that memory_t is used, and set the right stream directions */
-void memory_unused(memory_t& m, hls::stream<bool>& dummy_update);
 
 #define IKERNEL_NUM_EVENTS 8
 typedef ap_uint<1> trace_event;
@@ -390,7 +342,7 @@ struct ikernel_ring_context
 
 class ikernel {
 public:
-    ikernel() : dummy_update("dummy_update") {}
+    ikernel() {}
     virtual ~ikernel() {}
 
     virtual void step(ports& ports, tc_ikernel_data_counts& tc) = 0;
@@ -449,12 +401,6 @@ protected:
      * case the new_message() method shouldn't be called on the same invocation
      */
     bool update();
-
-protected:
-    /* Dummy boolean to make it easier to define unused HLS stream direction. Pass it
-     * to produce/consume function to trick HLS into thinking they are used. */
-    hls::stream<bool> dummy_update;
-
 private:
     ikernel_ring_context host_credits[1 << CUSTOM_RINGS_LOG_NUM]; // TODO magic number
     hls::stream<credit_update_registers> credit_updates;
@@ -474,22 +420,11 @@ static inline void link_pipeline_sim(hls_ik::pipeline_ports& in, hls_ik::pipelin
     hls_helpers::link_axi_stream(out.data_output, in.data_output);
 }
 
-static inline void link_mem_sim(hls_ik::memory_t& in, hls_ik::memory_t& out)
-{
-#pragma HLS inline
-    hls_helpers::link_axi_stream(out.aw, in.aw);
-    hls_helpers::link_axi_stream(out.w, in.w);
-    hls_helpers::link_axi_stream(out.ar, in.ar);
-    hls_helpers::link_axi_to_fifo(in.b, out.b);
-    hls_helpers::link_axi_to_fifo(in.r, out.r);
-}
-
 static inline void link_ports_sim(hls_ik::ports& in, hls_ik::ports& out)
 {
 #pragma HLS inline
     link_pipeline_sim(in.host, out.host);
     link_pipeline_sim(in.net, out.net);
-    link_mem_sim(in.mem, out.mem);
 }
 
 } // namespace
@@ -539,11 +474,8 @@ static inline void link_ports_sim(hls_ik::ports& in, hls_ik::ports& out)
     IKERNEL_PIPELINE_PORTS_PRAGMAS(__ports.net) \
     IKERNEL_PIPELINE_PORTS_PRAGMAS(__ports.host) \
     IKERNEL_CREDIT_REGS_PRAGMAS(__ports.host_credit_regs, 0x1050) \
-    DO_PRAGMA_SYN(HLS interface axis port=__ports.mem.ar) \
-    DO_PRAGMA_SYN(HLS interface axis port=__ports.mem.r) \
-    DO_PRAGMA_SYN(HLS interface axis port=__ports.mem.aw) \
-    DO_PRAGMA_SYN(HLS interface axis port=__ports.mem.w) \
-    DO_PRAGMA_SYN(HLS interface axis port=__ports.mem.b) \
+    DO_PRAGMA_SYN(HLS interface m_axi port=__ports.mem.mem latency=33 depth=40 \
+        num_write_outstanding=40 num_read_outstanding=40) \
     DO_PRAGMA(HLS array_partition variable=__ports.events complete) \
     DO_PRAGMA(HLS interface ap_none port=__ports.events)
 

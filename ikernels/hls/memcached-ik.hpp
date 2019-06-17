@@ -211,8 +211,8 @@ private:
     void intercept_out(hls_ik::pipeline_ports &out,
                        hls_ik::tc_pipeline_data_counts& tc);
     void handle_parsed_packet(memory& m,
-        hls_ik::trace_event events[IKERNEL_NUM_EVENTS]);
-    void handle_memory_responses(memory& m,
+        hls_ik::trace_event events[IKERNEL_NUM_EVENTS],
+        hls_ik::pipeline_ports& host,
         hls_ik::tc_pipeline_data_counts& tc);
     void parse_out_payload(const hls_ik::axi_data &d, ap_uint<1>& offset, char key[MEMCACHED_KEY_SIZE], char value[MEMCACHED_VALUE_SIZE]);
     void parse_in_payload(const hls_ik::axi_data &d, char udp_header[8], char key[MEMCACHED_KEY_SIZE]);
@@ -234,8 +234,7 @@ private:
     hls_ik::metadata _in_metadata, _out_metadata;
     programmable_fifo<bool, 300> _action_stream;
     programmable_fifo<memcached_key_value_pair,300> _kv_pairs_stream;
-    programmable_fifo<memcached_parsed_request,300> _req_prs2mem;
-    programmable_fifo<memcached_parsed_request,300> _req_mem2mem;
+    programmable_fifo<memcached_parsed_request,300> _parsed_requests_stream;
     hls_ik::metadata_stream _reply_metadata_stream, _parser_metadata, _buffer_metadata;
     hls_ik::data_stream _parser_data, _buffer_data;
     hls_helpers::duplicator<1, ap_uint<hls_ik::axi_data::width> > _raw_dup;
@@ -267,12 +266,8 @@ private:
     hls::stream<std::tuple<hls_ik::ikernel_id_t, bool> > _backpressure_drop; /* An event counts for a drop caused by CR backpressure */
     hls::stream<packet_action> _packet_action;
 
-    memcached_contexts ctx;
-    memcached_cache_contexts cache_ctx;
-
-    // handle_memory_responses state
-    enum { MEM_RESP_IDLE, MEM_RESP_WAIT } mem_resp_state;
-    memcached_parsed_request mem_resp_req;
+    memcached_contexts contexts;
+    memcached_cache_contexts cache_contexts;
 };
 
 #define MEMCACHED_REG_CACHE_SIZE 0

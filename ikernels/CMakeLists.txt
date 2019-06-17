@@ -8,17 +8,17 @@ include_directories(hls ../nica/hls)
 foreach(pcap_file udp_rr.pcap
         memcached-requests.pcap memcached-responses.pcap
         memcached-all-responses.pcap
-        memcached-requests-16.pcap memcached-responses-16.pcap
-        memcached-all-responses-16.pcap
-        memcached-set-16.pcap
+		memcached-requests-16.pcap memcached-responses-16.pcap
+		memcached-all-responses-16.pcap
         ping.pcap pong.pcap
+		coap-requests.pcap coap-filtered.pcap
 )
     add_custom_target(${pcap_file}
         DEPENDS ${CMAKE_SOURCE_DIR}/ikernels/hls/tests/${pcap_file}
         COMMAND cp ${CMAKE_SOURCE_DIR}/ikernels/hls/tests/${pcap_file} ${pcap_file})
 endforeach(pcap_file)
 
-foreach(f pong memcached-set-16)
+foreach(f pong)
     add_custom_target(${f}-padded.pcap
             COMMAND python ${CMAKE_SOURCE_DIR}/nica/hls/tests/pad_small_packets.py ${f}.pcap ${f}-padded.pcap
             DEPENDS ${f}.pcap ${CMAKE_SOURCE_DIR}/nica/hls/tests/pad_small_packets.py)
@@ -48,7 +48,7 @@ add_ikernel(pktgen "hls/pktgen.cpp;hls/passthrough.cpp" "hls/tests/pktgen_tests.
 
 ### Memcached
 add_ikernel(memcached "hls/memcached.cpp;hls/passthrough.cpp" "hls/tests/memcached_tests.cpp;../nica/hls/tests/tb.cpp" memcached memcached_top
-         "memcached-requests.pcap;memcached-responses.pcap;memcached-all-responses.pcap;memcached-requests-16.pcap;memcached-responses-16.pcap;memcached-all-responses-16.pcap;memcached-set-16.pcap;memcached-set-16-padded.pcap")
+         "memcached-requests.pcap;memcached-responses.pcap;memcached-all-responses.pcap;memcached-requests-16.pcap;memcached-responses-16.pcap;memcached-all-responses-16.pcap")
 set(MEMCACHED_CACHE_SIZE "4096" CACHE STRING
     "Cache size in entries for the memcached ikernel")
 set(MEMCACHED_KEY_SIZE "16" CACHE STRING
@@ -61,6 +61,9 @@ foreach(memcached_target memcached_tests memcached-emu)
 		-DMEMCACHED_VALUE_SIZE=${MEMCACHED_VALUE_SIZE})
 endforeach(memcached_target)
 
+# Coap
+add_ikernel(coap "hls/coap.cpp;hls/passthrough.cpp" "hls/tests/coap_tests.cpp;../nica/hls/tests/tb.cpp" coap coap_ikernel "coap-requests.pcap;coap-filtered.pcap")
+target_link_libraries(coap_tests ssl crypto)
 ### Add your ikernel here:
 # add_ikernel(ikernel sources testbench_sources hls_target_name top_function [testbench_files])
 

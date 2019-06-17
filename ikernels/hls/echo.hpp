@@ -32,5 +32,6 @@
 #define LOG_NUM_ECHO_CONTEXTS 6
 
 #define ECHO_RESPOND_TO_SOCKPERF 0
+#define ECHO_DUMMY 1
 
 #endif // ECHO_HPP

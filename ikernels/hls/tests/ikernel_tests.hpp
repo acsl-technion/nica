@@ -154,28 +154,6 @@ private:
     std::list<int> flows;
 };
 
-template <size_t _interface_width>
-struct memory_model {
-    enum {
-        array_size = 1ull << (_interface_width - 6),
-    };
-    ap_uint<512> _array[array_size];
-
-    void mem(hls_ik::memory_t& m)
-    {
-        if (!m.aw.empty() && !m.w.empty()) {
-            // TODO bursts
-            _array[m.aw.read()] = m.w.read();
-            m.b.write(true);
-        }
-
-        if (!m.ar.empty()) {
-            // TODO bursts
-            m.r.write(_array[m.ar.read()]);
-        }
-    }
-};
-
 class ikernel_test :
     public ::testing::TestWithParam<top_function> {
 protected:
@@ -189,11 +167,9 @@ protected:
     hls_ik::virt_gateway_registers gateway;
     int top_call_count;
     int default_retries;
-    memory_model<DDR_INTERFACE_WIDTH> mem;
 
     void top() {
         GetParam()(p, id, gateway, tc);
-        mem.mem(p.mem);
         ++top_call_count;
     }
 

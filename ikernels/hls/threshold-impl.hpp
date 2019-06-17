@@ -29,7 +29,6 @@
 #include <gateway.hpp>
 #include <flow_table.hpp>
 #include <context_manager.hpp>
-#include <drop_or_pass.hpp>
 
 #include "threshold.hpp"
 
@@ -72,23 +71,20 @@ protected:
 
     void net_ingress(hls_ik::pipeline_ports& p, hls_ik::tc_pipeline_data_counts& tc);
     void parser();
-    void egress();
+    void egress(hls_ik::pipeline_ports& p);
 
     hls::stream<value> parsed;
-    hls_ik::data_stream data_dup_to_parser, data_dup_to_egress,
-                        _data_egress_to_filter;
+    hls_ik::data_stream data_dup_to_parser, data_dup_to_egress;
 
     struct decision_t {
+        bool drop;
         value v;
         hls_ik::ring_id_t ring_id;
     };
     hls::stream<decision_t> decisions;
-    hls::stream<bool> _decision_pass;
     decision_t egress_last_decision;
 
     enum { FIRST, REST } parser_state;
 
     enum { IDLE, STREAM } egress_state;
-
-    drop_or_pass _dropper;
 };

@@ -29,6 +29,72 @@
 #include "gateway.hpp"
 
 template <typename context_t, uint8_t log_size>
+class base_context_manager {
+public:
+    typedef ap_uint<log_size> index_t;
+    static const size_t size = 1 << log_size;
+
+    base_context_manager() {}
+
+    bool valid_index(uint32_t index)
+    {
+        return index < (1 << log_size);
+    }
+
+    int gateway_set(uint32_t index)
+    {
+#pragma HLS inline
+#pragma HLS data_pack variable=updates
+        if (!valid_index(index))
+            return GW_FAIL;
+
+        if (updates.full())
+            return GW_BUSY;
+
+        updates.write(std::make_tuple(index, gateway_context));
+        return GW_DONE;
+    }
+
+    context_t& operator[](index_t index)
+    {
+#pragma HLS inline
+        return contexts[index];
+    }
+
+    const context_t& operator[](index_t index) const
+    {
+#pragma HLS inline
+        return contexts[index];
+    }
+
+    /* Return true when accessing the array for the gateway */
+    bool update()
+    {
+#pragma HLS inline
+#pragma HLS data_pack variable=updates
+        std::tuple<index_t, context_t> update;
+        if (updates.read_nb(update)) {
+            index_t index;
+            context_t context;
+
+            std::tie(index, context) = update;
+            contexts[index] = context;
+            return true;
+        }
+
+        return false;
+    }
+
+    context_t gateway_context;
+    context_t contexts[size];
+
+private:
+
+    hls::stream<std::tuple<index_t, context_t> > updates;
+};
+
+
+template <typename context_t, uint8_t log_size>
 class context_manager {
 public:
     typedef ap_uint<log_size> index_t;
@@ -39,19 +105,6 @@ public:
     bool valid_index(uint32_t index)
     {
         return index < (1 << log_size);
-    }
-
-    int gateway_set(uint32_t index)
-    {
-#pragma HLS inline
-        if (!valid_index(index))
-            return GW_FAIL;
-
-        if (updates.full())
-            return GW_BUSY;
-
-        updates.write(std::make_tuple(index, gateway_context));
-        return GW_DONE;
     }
 
     int gateway_query(uint32_t index)
@@ -84,6 +137,7 @@ public:
     int gateway_rmw(uint32_t index, F f)
     {
 #pragma HLS inline
+#pragma HLS data_pack variable=updates
         switch (gateway_state) {
         case IDLE:
             if (!valid_index(index))
@@ -133,22 +187,11 @@ public:
         }
     }
 
-    context_t& operator[](index_t index)
-    {
-#pragma HLS inline
-        return contexts[index];
-    }
-
-    const context_t& operator[](index_t index) const
-    {
-#pragma HLS inline
-        return contexts[index];
-    }
-
     /* Return true when accessing the array for the gateway */
     bool update()
     {
 #pragma HLS inline
+#pragma HLS data_pack variable=updates
         std::tuple<index_t, context_t> update;
         if (updates.read_nb(update)) {
             index_t index;
@@ -168,13 +211,39 @@ public:
         return false;
     }
 
+    int gateway_set(uint32_t index)
+    {
+#pragma HLS inline
+#pragma HLS data_pack variable=updates
+        if (!valid_index(index))
+            return GW_FAIL;
+
+        if (updates.full())
+            return GW_BUSY;
+
+        updates.write(std::make_tuple(index, gateway_context));
+        return GW_DONE;
+    }
+
+    context_t& operator[](index_t index)
+    {
+#pragma HLS inline
+        return contexts[index];
+    }
+
+    const context_t& operator[](index_t index) const
+    {
+#pragma HLS inline
+        return contexts[index];
+    }
+
     context_t gateway_context;
     context_t contexts[size];
 
 private:
     enum { IDLE, QUERY_SENT, UPDATE } gateway_state;
 
-    hls::stream<std::tuple<index_t, context_t> > updates;
     hls::stream<index_t> queries;
     hls::stream<context_t> responses;
+    hls::stream<std::tuple<index_t, context_t> > updates;
 };

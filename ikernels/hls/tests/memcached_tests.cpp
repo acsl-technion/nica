@@ -37,7 +37,6 @@ namespace {
                    BOOST_PP_ENUM_PARAMS(NUM_IKERNELS, ports),
                    h2n_tc, h2n_tc, n2h_tc, n2h_tc);
             memcached_top(p, id, gateway, tc);
-            mem.mem(p.mem);
         }
 
         void SetUp() {
@@ -200,41 +199,6 @@ namespace {
         tc.host.tc_meta_counts[0] = prev_meta;
         tc.host.tc_data_counts[0] = prev_data;
     }
-
-    TEST_P(memcached_test, pcap_set) {
-        FILE* nwp_output = tmpfile();
-        ASSERT_TRUE(nwp_output) << "cannot create temporary file for output.";
-        FILE* cxp_output = tmpfile();
-        ASSERT_TRUE(cxp_output) << "cannot create temporary file for output.";
-
-        memset(&c, 0, sizeof(c));
-        flow_table_wrapper n2h_ft_gateway([&]() { top(); }, c.n2h.common.flow_table_gateway);
-        flow_table_wrapper h2n_ft_gateway([&]() { top(); }, c.h2n.common.flow_table_gateway);
-        EXPECT_TRUE(n2h_ft_gateway.add_flow(0, FT_IKERNEL));
-        EXPECT_TRUE(h2n_ft_gateway.add_flow(0, FT_IKERNEL));
-        c.n2h.common.enable = true;
-        c.h2n.common.enable = true;
-
-        if (MEMCACHED_KEY_SIZE == 16 && MEMCACHED_VALUE_SIZE == 16)
-            ASSERT_GE(read_pcap("memcached-set-16.pcap", nwp2sbu), 0);
-        run();
-
-        write_pcap(nwp_output, sbu2nwp, false);
-        write_pcap(cxp_output, sbu2cxp, false);
-
-        // nwp output should be empty
-        if (MEMCACHED_KEY_SIZE == 16 && MEMCACHED_VALUE_SIZE == 16)
-            EXPECT_TRUE(compare_output(filename(nwp_output), "",
-                                       "memcached-set-16-padded.pcap", "sctp"));
-        if (MEMCACHED_KEY_SIZE == 16 && MEMCACHED_VALUE_SIZE == 16)
-            EXPECT_TRUE(compare_output(filename(cxp_output), "",
-                                       "memcached-set-16-padded.pcap", ""));
-
-        if (MEMCACHED_KEY_SIZE == 16 && MEMCACHED_VALUE_SIZE == 16) {
-            EXPECT_EQ(read(MEMCACHED_STATS_SET_REQUESTS), 1);
-        }
-    }
-
     INSTANTIATE_TEST_CASE_P(memcached_test_instance, memcached_test,
             ::testing::Values(&memcached_top));
 

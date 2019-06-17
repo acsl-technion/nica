@@ -32,22 +32,22 @@ class programmable_fifo
 {
 public:
     typedef ap_uint<index_width> index_t;
-    programmable_fifo(index_t full_threshold, index_t empty_threshold = 0) :
-        _stream(),
-        _pi(0), _ci(0), _full_threshold(full_threshold),
-        _empty_threshold(empty_threshold),
-        _empty_local_pi(0), _full_local_ci(0),
-        _pi_updates(), _ci_updates(), 
-        _pi_update_flag(0), _ci_update_flag(0)
+    programmable_fifo(index_t full_threshold = 490, index_t empty_threshold = 0) :
+            _stream(),
+            _pi(0), _ci(0), _full_threshold(full_threshold),
+            _empty_threshold(empty_threshold),
+            _empty_local_pi(0), _full_local_ci(0),
+            _pi_updates(), _ci_updates(),
+            _pi_update_flag(0), _ci_update_flag(0)
     { }
 
     programmable_fifo(index_t full_threshold, index_t empty_threshold, const std::string& name) :
-        _stream(name.c_str()),
-        _pi(0), _ci(0), _full_threshold(full_threshold),
-        _empty_threshold(empty_threshold),
-        _empty_local_pi(0), _full_local_ci(0),
-        _pi_updates((name + "_pi").c_str()), _ci_updates((name + "_ci").c_str()),
-        _pi_update_flag(0), _ci_update_flag(0)
+            _stream(name.c_str()),
+            _pi(0), _ci(0), _full_threshold(full_threshold),
+            _empty_threshold(empty_threshold),
+            _empty_local_pi(0), _full_local_ci(0),
+            _pi_updates((name + "_pi").c_str()), _ci_updates((name + "_ci").c_str()),
+            _pi_update_flag(0), _ci_update_flag(0)
     { }
 
     void write(const T& t) {
@@ -127,7 +127,7 @@ public:
 
     bool internal_full() {
 #pragma HLS inline
-	return _stream.full();
+        return _stream.full();
     }
 
     // Exposed for data_pack pragmas in memcached

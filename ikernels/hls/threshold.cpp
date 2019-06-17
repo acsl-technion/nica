@@ -93,8 +93,7 @@ void threshold::net_ingress(hls_ik::pipeline_ports& p,
     if (update())
         return;
 
-    if (p.metadata_input.empty() || parsed.empty() || decisions.full() ||
-        _decision_pass.full())
+    if (p.metadata_input.empty() || parsed.empty() || decisions.full())
         return;
 
     hls_ik::metadata meta = p.metadata_input.read();
@@ -117,37 +116,36 @@ void threshold::net_ingress(hls_ik::pipeline_ports& p,
         p.metadata_output.write(meta);
     }
 
-    decisions.write(decision_t{v, ring_id});
-    _decision_pass.write(!drop);
+    decisions.write(decision_t{drop, v, ring_id});
     update_stats(meta.ikernel_id, v, drop, backpressure);
 }
 
-void threshold::egress()
+void threshold::egress(hls_ik::pipeline_ports& p)
 {
     axi_data d;
 #pragma HLS pipeline enable_flush ii=1
     switch (egress_state)
     {
     case IDLE:
-        if (decisions.empty() || _data_egress_to_filter.full())
+        if (decisions.empty())
             return;
 
         egress_last_decision = decisions.read();
         egress_state = STREAM;
 
-        if (egress_last_decision.ring_id != 0) {
-            d = axi_data((egress_last_decision.v, ap_uint<256 - value::width>()), 0xf0000000, true);
-            _data_egress_to_filter.write(d);
+        if (!egress_last_decision.drop && egress_last_decision.ring_id != 0) {
+                d = axi_data((egress_last_decision.v, ap_uint<256 - value::width>()), 0xf0000000, true);
+                p.data_output.write(d);
         }
         break;
 
     case STREAM:
-        if (data_dup_to_egress.empty() || _data_egress_to_filter.full())
+        if (data_dup_to_egress.empty())
             return;
 
         d = data_dup_to_egress.read();
-        if (!egress_last_decision.ring_id)
-            _data_egress_to_filter.write(d);
+        if (!egress_last_decision.drop && !egress_last_decision.ring_id)
+            p.data_output.write(d);
 
         egress_state = d.last ? IDLE : STREAM;
         break;
@@ -203,13 +201,11 @@ void threshold::step(hls_ik::ports& p, hls_ik::tc_ikernel_data_counts& tc)
     DO_PRAGMA(HLS stream variable=data_dup_to_parser depth=2)
     DO_PRAGMA(HLS stream variable=data_dup_to_egress depth=15)
 
-    memory_unused(p.mem, dummy_update);
     pass_packets(p.host);
     hls_helpers::dup(p.net.data_input, data_dup_to_parser, data_dup_to_egress);
     parser();
     net_ingress(p.net, tc.net);
-    egress();
-    _dropper.filter(_decision_pass, _data_egress_to_filter, p.net.data_output);
+    egress(p.net);
 }
 
 int threshold::reg_write(int address, int value, ikernel_id_t ikernel_id)

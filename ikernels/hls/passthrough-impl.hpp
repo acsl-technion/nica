@@ -30,7 +30,6 @@
 #include <gateway.hpp>
 #include <flow_table.hpp>
 #include <context_manager.hpp>
-#include <drop_or_pass.hpp>
 
 #define LOG_NUM_PASSTHROUGH_CONTEXTS 6
 #define NUM_PASSTHROUGH_CONTEXTS (1 << LOG_NUM_PASSTHROUGH_CONTEXTS)
@@ -62,8 +61,9 @@ protected:
     enum { DECISION, STREAM } _state;
 
     hls::stream<bool> _decisions;
-    drop_or_pass dropper;
+    bool _action;
     void intercept_in(hls_ik::pipeline_ports& p, hls_ik::tc_pipeline_data_counts& tc);
+    void drop_or_pass(hls_ik::pipeline_ports& p);
     passthrough_contexts contexts;
 };
 

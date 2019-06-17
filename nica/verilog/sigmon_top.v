@@ -74,7 +74,7 @@
 //                           Default trigger position = 0: Sampling window begins after trigger occurrence
 //    sigmon_ctrl1[15:12]  - Reserved  
 //    sigmon_ctrl1[23:16]  - Trigger source. Select either of the input events/sampled signals
-//                           Default: 0xff, selecting SIGMON_ENABLED event (start monitoring immediately after enabling sigmon)
+//                           Default: 0x3f, selecting SIGMON_ENABLED event (start monitoring immediately after enabling sigmon)
 //    sigmon_ctrl1[30:24]  - Reserved  
 //    sigmon_ctrl1[31]     - sigmon enable. Enables signals monitoring
 //                           Upon assertion, the sigmon_fifo and free running counter are cleared.
@@ -417,7 +417,7 @@
 //// sigmon_ctrl6: Configuring both event_count0 and event_count1.
 //
 //// Configuring event_counter0 to count h200 clocks from signals monitoring enabled (asserting sigmon_ctrl1[31]):
-//// The count_enable input is selected as SIGMON_ENABLED (xff), to turn on the counter enable right from the start.
+//// The count_enable input is selected as SIGMON_ENABLED (x3f), to turn on the counter enable right from the start.
 //// The count_event input is set to constant 'high' (EVENT_TRUE, x01).
 //// Once this counter hits its limit, is asserts the event LOCAL_EVENT0 (used below to enable event_count1)
 //
@@ -589,6 +589,11 @@ parameter
     input 				  axi4mm_r_rdy_in,
     input 				  axi4mm_r_vld_in,
     input 				  axi4mm_r_last_in,
+    input [63:0] 			  ik2map_axi4mm_aw_addr_in,
+    input [63:0] 			  ik2map_axi4mm_ar_addr_in,
+    input [31:0] 			  sbu2mlx_axi4mm_aw_addr_in,
+    input [31:0] 			  sbu2mlx_axi4mm_ar_addr_in,
+
     input [15:0] 			  nica_events_in,
 
   // Misc signals
@@ -730,6 +735,11 @@ localparam
   reg 					  axi4mm_r_rdy;
   reg 					  axi4mm_r_vld;
   reg 					  axi4mm_r_last;
+  reg [63:0] 				  ik2map_axi4mm_aw_addr;
+  reg [63:0] 				  ik2map_axi4mm_ar_addr;
+  reg [31:0] 				  sbu2mlx_axi4mm_aw_addr;
+  reg [31:0] 				  sbu2mlx_axi4mm_ar_addr;
+
   reg [15:0] 				  nica_events;
   reg [31:0] 				  dram_ctrl;
   reg 					  clb0_outQ;
@@ -834,6 +844,11 @@ localparam
     axi4mm_r_rdy <= axi4mm_r_rdy_in;
     axi4mm_r_vld <= axi4mm_r_vld_in;
     axi4mm_r_last <= axi4mm_r_last_in;
+    ik2map_axi4mm_aw_addr <= ik2map_axi4mm_aw_addr_in;
+    ik2map_axi4mm_ar_addr <= ik2map_axi4mm_ar_addr_in;
+    sbu2mlx_axi4mm_aw_addr <= sbu2mlx_axi4mm_aw_addr_in;
+    sbu2mlx_axi4mm_ar_addr <= sbu2mlx_axi4mm_ar_addr_in;
+
     nica_events <= nica_events_in;
     dram_ctrl <= dram_ctrl_in;
   end
@@ -1188,7 +1203,7 @@ end
 // writing to sigmon contrl registers
 always @(posedge clk) begin
   if (reset) begin
-    sigmon_ctrl1 <= 32'hff0000; // Trigger source: SIGMON_ENABLED, trigger position: 0
+    sigmon_ctrl1 <= 32'h3f0000; // Trigger source: SIGMON_ENABLED, trigger position: 0
 
 // Setting default selection of monitored signals: All events are disabled
     sigmon_ctrl2 <= 32'b0;
@@ -2175,18 +2190,6 @@ end
  .got_ddrwdone(got_ddrwdone),
  .got_ddrraddr(got_ddrraddr),
  .got_ddrrdata(got_ddrrdata),
- .axi4mm_aw_rdy(axi4mm_aw_rdy),
- .axi4mm_aw_vld(axi4mm_aw_vld),
- .axi4mm_w_rdy(axi4mm_w_rdy),
- .axi4mm_w_vld(axi4mm_w_vld),
- .axi4mm_w_last(axi4mm_w_last),
- .axi4mm_b_rdy(axi4mm_b_rdy),
- .axi4mm_b_vld(axi4mm_b_vld),
- .axi4mm_ar_rdy(axi4mm_ar_rdy),
- .axi4mm_ar_vld(axi4mm_ar_vld),
- .axi4mm_r_rdy(axi4mm_r_rdy),
- .axi4mm_r_vld(axi4mm_r_vld),
- .axi4mm_r_last(axi4mm_r_last),
  .dram_test_enabled(dram_test_enabled),
  .nica_events(nica_events),
  .count_events(count_events),
@@ -5838,6 +5841,39 @@ sigmon_logic_blocks sigmon_clbs (
 	  stream0_tlast = sbu2nwp_tlast;
 	  stream0_data = sbu2nwp_data;
 	end
+
+
+      // Sampling DDR read/write address, before and after the ddr_map_table
+      // Utilizing the existing stream_pattern mechanism, originally added for network stream search.
+      // tlast is enforced to '1 since the address spans a single stream flit.
+      IK2MAP_DDR_AW:
+	begin
+	  stream0_vld = ik2map_axi4mm_aw_vld;
+	  stream0_rdy = ik2map_axi4mm_aw_rdy;
+	  stream0_tlast = 1'b1;
+	  stream0_data = {192'h000000000000000000000000000000000000000000000000, ik2map_axi4mm_aw_addr};
+	end
+      SBU2MLX_DDR_AW:
+	begin
+	  stream0_vld = axi4mm_aw_vld;
+	  stream0_rdy = axi4mm_aw_rdy;
+	  stream0_tlast = 1'b1;
+	  stream0_data = {192'h000000000000000000000000000000000000000000000000, sbu2mlx_axi4mm_aw_addr};
+	end
+      IK2MAP_DDR_AR:
+	begin
+	  stream0_vld = ik2map_axi4mm_ar_vld;
+	  stream0_rdy = ik2map_axi4mm_ar_rdy;
+	  stream0_tlast = 1'b1;
+	  stream0_data = {192'h000000000000000000000000000000000000000000000000, ik2map_axi4mm_ar_addr};
+	end
+      SBU2MLX_DDR_AR:
+	begin
+	  stream0_vld = axi4mm_ar_vld;
+	  stream0_rdy = axi4mm_ar_rdy;
+	  stream0_tlast = 1'b1;
+	  stream0_data = {192'h000000000000000000000000000000000000000000000000, sbu2mlx_axi4mm_ar_addr};
+	end
       default: begin
 	stream0_vld = 1'b0;
 	stream0_rdy = 1'b0;
@@ -5875,6 +5911,34 @@ sigmon_logic_blocks sigmon_clbs (
 	  stream1_rdy = sbu2nwp_rdy;
 	  stream1_tlast = sbu2nwp_tlast;
 	  stream1_data = sbu2nwp_data;
+	end
+      IK2MAP_DDR_AW:
+	begin
+	  stream1_vld = ik2map_axi4mm_aw_vld;
+	  stream1_rdy = ik2map_axi4mm_aw_rdy;
+	  stream1_tlast = 1'b1;
+	  stream1_data = {192'h000000000000000000000000000000000000000000000000, ik2map_axi4mm_aw_addr};
+	end
+      SBU2MLX_DDR_AW:
+	begin
+	  stream1_vld = axi4mm_aw_vld;
+	  stream1_rdy = axi4mm_aw_rdy;
+	  stream1_tlast = 1'b1;
+	  stream1_data = {192'h000000000000000000000000000000000000000000000000, sbu2mlx_axi4mm_aw_addr};
+	end
+      IK2MAP_DDR_AR:
+	begin
+	  stream1_vld = ik2map_axi4mm_ar_vld;
+	  stream1_rdy = ik2map_axi4mm_ar_rdy;
+	  stream1_tlast = 1'b1;
+	  stream1_data = {192'h000000000000000000000000000000000000000000000000, ik2map_axi4mm_ar_addr};
+	end
+      SBU2MLX_DDR_AR:
+	begin
+	  stream1_vld = axi4mm_ar_vld;
+	  stream1_rdy = axi4mm_ar_rdy;
+	  stream1_tlast = 1'b1;
+	  stream1_data = {192'h000000000000000000000000000000000000000000000000, sbu2mlx_axi4mm_ar_addr};
 	end
       default: begin
 	stream1_vld = 1'b0;
@@ -5914,6 +5978,35 @@ sigmon_logic_blocks sigmon_clbs (
 	  stream2_tlast = sbu2nwp_tlast;
 	  stream2_data = sbu2nwp_data;
 	end
+      IK2MAP_DDR_AW:
+	begin
+	  stream2_vld = ik2map_axi4mm_aw_vld;
+	  stream2_rdy = ik2map_axi4mm_aw_rdy;
+	  stream2_tlast = 1'b1;
+	  stream2_data = {192'h000000000000000000000000000000000000000000000000, ik2map_axi4mm_aw_addr};
+	end
+      SBU2MLX_DDR_AW:
+	begin
+	  stream2_vld = axi4mm_aw_vld;
+	  stream2_rdy = axi4mm_aw_rdy;
+	  stream2_tlast = 1'b1;
+	  stream2_data = {192'h000000000000000000000000000000000000000000000000, sbu2mlx_axi4mm_aw_addr};
+	end
+      IK2MAP_DDR_AR:
+	begin
+	  stream2_vld = ik2map_axi4mm_ar_vld;
+	  stream2_rdy = ik2map_axi4mm_ar_rdy;
+	  stream2_tlast = 1'b1;
+	  stream2_data = {192'h000000000000000000000000000000000000000000000000, ik2map_axi4mm_ar_addr};
+	end
+      SBU2MLX_DDR_AR:
+	begin
+	  stream2_vld = axi4mm_ar_vld;
+	  stream2_rdy = axi4mm_ar_rdy;
+	  stream2_tlast = 1'b1;
+	  stream2_data = {192'h000000000000000000000000000000000000000000000000, sbu2mlx_axi4mm_ar_addr};
+	end
+      
       default: begin
 	stream2_vld = 1'b0;
 	stream2_rdy = 1'b0;
@@ -5951,6 +6044,34 @@ sigmon_logic_blocks sigmon_clbs (
 	  stream3_rdy = sbu2nwp_rdy;
 	  stream3_tlast = sbu2nwp_tlast;
 	  stream3_data = sbu2nwp_data;
+	end
+      IK2MAP_DDR_AW:
+	begin
+	  stream3_vld = ik2map_axi4mm_aw_vld;
+	  stream3_rdy = ik2map_axi4mm_aw_rdy;
+	  stream3_tlast = 1'b1;
+	  stream3_data = {192'h000000000000000000000000000000000000000000000000, ik2map_axi4mm_aw_addr};
+	end
+      SBU2MLX_DDR_AW:
+	begin
+	  stream3_vld = axi4mm_aw_vld;
+	  stream3_rdy = axi4mm_aw_rdy;
+	  stream3_tlast = 1'b1;
+	  stream3_data = {224'h00000000000000000000000000000000000000000000000000000000, sbu2mlx_axi4mm_aw_addr};
+	end
+      IK2MAP_DDR_AR:
+	begin
+	  stream3_vld = ik2map_axi4mm_ar_vld;
+	  stream3_rdy = ik2map_axi4mm_ar_rdy;
+	  stream3_tlast = 1'b1;
+	  stream3_data = {192'h000000000000000000000000000000000000000000000000, ik2map_axi4mm_ar_addr};
+	end
+      SBU2MLX_DDR_AR:
+	begin
+	  stream3_vld = axi4mm_ar_vld;
+	  stream3_rdy = axi4mm_ar_rdy;
+	  stream3_tlast = 1'b1;
+	  stream3_data = {224'h00000000000000000000000000000000000000000000000000000000, sbu2mlx_axi4mm_ar_addr};
 	end
       default: begin
 	stream3_vld = 1'b0;

@@ -113,21 +113,4 @@ namespace hls_ik {
         init(tc.host);
         init(tc.net);
     }
-
-    void memory_unused(memory_t& m, hls::stream<bool>& dummy_update)
-    {
-#pragma HLS inline
-        bool dummy;
-
-        dummy_update.write_nb(false);
-
-        if (!dummy_update.read_nb(dummy))
-            dummy = false;
-
-        hls_helpers::produce(m.ar, dummy);
-        hls_helpers::produce(m.aw, dummy);
-        hls_helpers::produce(m.w, dummy);
-        hls_helpers::consume(m.r, dummy);
-        hls_helpers::consume(m.b, dummy);
-    }
 }

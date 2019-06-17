@@ -78,12 +78,41 @@ void passthrough::intercept_in(pipeline_ports& p, tc_pipeline_data_counts& tc) {
     }
 }
 
+void passthrough::drop_or_pass(pipeline_ports& p) {
+#pragma HLS pipeline enable_flush ii=1
+
+    switch (_state) {
+        case DECISION:
+            if (!_decisions.empty()) {
+                _action = _decisions.read();
+
+                _state = STREAM;
+                goto stream;
+            }
+            break;
+        case STREAM:
+stream:
+            if (!p.data_input.empty()) {
+                axi_data d = p.data_input.read();
+
+                if (_action) {
+                    p.data_output.write(d);
+                }
+
+                if (d.last) {
+                    _state = DECISION;
+                }
+            }
+
+            break;
+    }
+}
+
 void passthrough::step(ports& p, tc_ikernel_data_counts& tc) {
 #pragma HLS inline
-    memory_unused(p.mem, dummy_update);
     pass_packets(p.host);
     intercept_in(p.net, tc.net);
-    dropper.filter(_decisions, p.net.data_input, p.net.data_output);
+    drop_or_pass(p.net);
 }
 
 int passthrough::reg_write(int address, int value, ikernel_id_t ikernel_id)

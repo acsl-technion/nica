@@ -279,6 +279,22 @@ void produce(hls::stream<T>& out, bool enabled)
     constant(T(0))(out, enabled);
 }
 
+template <unsigned Width>
+unsigned char get_byte(const ap_uint<Width>& vec, const int i) {
+#pragma HLS inline
+    const int bottom = (Width - 1) - ((i + 1) * 8 - 1), top = (Width - 1) - (i * 8);
+
+    return vec(top, bottom);
+}
+
+template <unsigned Width>
+void write_byte(ap_uint<Width>& vec, const int i, const unsigned char val) {
+#pragma HLS inline
+    const int bottom = (Width - 1) - ((i + 1) * 8 - 1), top = (Width - 1) - (i * 8);
+
+    vec(top, bottom) = val;
+}
+
 template <unsigned Size, typename T>
 void memcpy(T *dest, const T *src) {
 #pragma HLS inline
@@ -286,6 +302,41 @@ void memcpy(T *dest, const T *src) {
 #pragma HLS unroll
          dest[i] = src[i];
     }
+}
+
+template <unsigned Size, unsigned Width, unsigned Width2>
+void memcpy(ap_uint<Width>& dest, ap_uint<Width2>& src) {
+#pragma HLS inline
+    for (int i = 0; i < Size; ++i) {
+#pragma HLS unroll
+        write_byte<Width>(dest, i, get_byte<Width2>(src, i));
+    }
+}
+
+template <unsigned Size, typename T>
+void memset(T *dest, T value) {
+#pragma HLS inline
+    for (int i = 0; i < Size; ++i) {
+#pragma HLS unroll
+        dest[i] = value;
+    }
+}
+
+inline int bytes_to_int(const unsigned char* bytes, const uint32_t offset) {
+#pragma HLS inline
+    return (bytes[4 * offset]) << 24 |
+           (bytes[4 * offset + 1] & 0xFF) << 16 |
+           (bytes[4 * offset + 2] & 0xFF) << 8 |
+           (bytes[4 * offset + 3] & 0xFF);
+}
+
+template <unsigned Width>
+inline void int_to_bytes(const int src, ap_uint<Width>& dest, const uint32_t offset) {
+#pragma HLS inline
+    write_byte<Width>(dest, 4 * offset, src >> 24);
+    write_byte<Width>(dest, 4 * offset + 1, src >> 16);
+    write_byte<Width>(dest, 4 * offset + 2, src >> 8);
+    write_byte<Width>(dest, 4 * offset + 3, src);
 }
 
 /* Zero out bytes in the data stream that have their keep bit cleared */

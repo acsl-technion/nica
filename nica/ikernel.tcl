@@ -54,7 +54,7 @@ proc create_project {name top dir files tb_files} {
         set cflags "$cflags -DMEMCACHED_VALUE_SIZE=$memcached_value_size"
     }
 
-    set ldflags "-lpcap $uuid_ldflags -L$gtest_root -lgtest -L$nica_basedir/../build/nica/ -lnica-csim"
+    set ldflags "-lpcap -lssl -lcrypto $uuid_ldflags -L$gtest_root -lgtest -L$nica_basedir/../build/nica/ -lnica-csim"
 
     foreach f $files {
         set f [file join $dir $f]

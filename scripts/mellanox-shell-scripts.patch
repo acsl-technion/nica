@@ -48,7 +48,7 @@ index 05cb2e665bf9..f0d2341bfb6b 100755
  set vhdlList       	  [glob -nocomplain $vhdlDir/*.vhd]
  set xciList           [glob -nocomplain $xciDir/*/*.xci]
  set bdList            [glob -nocomplain $bdDir/*/*.bd]
-@@ -82,6 +107,12 @@ set_attribute module $sbu ipRepo              $ipRepoList
+@@ -82,6 +107,15 @@ set_attribute module $sbu ipRepo              $ipRepoList
  set_attribute module $sbu xdc                 $xdcList
  set_attribute module $sbu synthXDC            $xdcSynthList
  set_attribute module $sbu synth               1
@@ -57,7 +57,10 @@ index 05cb2e665bf9..f0d2341bfb6b 100755
 +    "BUILD_NUMBER=$build_number" \
 +    "SIGMON_ENABLE=$sigmon_enable" \
 +    "IKERNEL0=$ikernel0" \
-+    "IKERNEL1=$ikernel1"]
++    "IKERNEL1=$ikernel1" \
++    "FIRST_SHA_UNITS=$first_sha_units" \
++    "SECOND_SHA_UNITS=$second_sha_units" \
++]
  
  set sbu_instance1 "sbu"
  
@@ -66,7 +69,7 @@ new file mode 100644
 index 000000000000..d21cdeddf590
 --- /dev/null
 +++ b/scripts/xilinx/env.tcl
-@@ -0,0 +1,32 @@
+@@ -0,0 +4,34 @@
 +package require Tcl
 +package require struct::set
 +
@@ -88,6 +91,8 @@ index 000000000000..d21cdeddf590
 +set ikernel1 [ get_env IKERNEL1 "threshold" ]
 +set num_ikernels [ get_env NUM_IKERNELS 1 ]
 +set cms_heap_depth [ get_env CMS_HEAP_DEPTH 256 ]
++set first_sha_units [ get_env FIRST_SHA_UNITS 3 ]
++set second_sha_units [ get_env SECOND_SHA_UNITS 2 ]
 +
 +set ikernel_defs [list]
 +for {set i 0} {$i < $num_ikernels} {incr i} {
@@ -114,7 +119,6 @@ index 1bb308227984..a07f625a0554 100755
           log_time report_utilization $start_time $end_time
        } 
 diff --git a/scripts/xilinx/step.tcl b/scripts/xilinx/step.tcl
-index d5f8e0c54f9a..b39a647b0db5 100755
 --- a/scripts/xilinx/step.tcl
 +++ b/scripts/xilinx/step.tcl
 @@ -111,7 +111,8 @@ proc impl_step {phase instance {options none} {directive none} {pre none} {setti
@@ -128,7 +132,6 @@ index d5f8e0c54f9a..b39a647b0db5 100755
        log_time report_utilization $start_time $end_time
     }
 diff --git a/scripts/xilinx/synthesize.tcl b/scripts/xilinx/synthesize.tcl
-index caef6ef03864..998ddc216cb9 100755
 --- a/scripts/xilinx/synthesize.tcl
 +++ b/scripts/xilinx/synthesize.tcl
 @@ -142,7 +142,10 @@ proc synthesize { module } {

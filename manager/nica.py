@@ -126,17 +126,16 @@ class NICA(ABC):
         self.h2n_arbiter = Arbiter(self, 0x458)
         self.custom_ring = CustomRing(self, 0x78)
         self.mmu = MMU(self)
-        self.axi_cache = {}
 
     @abstractmethod
     def axi_read(self, address, delay=None):
         '''Read a value from AXI4-Lite.'''
-        return self.axi_cache.get(address, None)
+        pass
 
     @abstractmethod
     def axi_write(self, address, value, delay=None):
         '''Write a value to AXI4-Lite.'''
-        self.axi_cache[address] = value
+        pass
 
     def get_uuid(self, ikernel=0):
         '''Read the UUID of a given ikernel index.'''
@@ -191,13 +190,11 @@ class NicaSimulation(NICA):
         '''Write a value to AXI4-Lite.'''
         print("%d: 0 %x %x\n" % (delay, address, value))
         self.total_delay += delay
-        return super(NicaSimulation, self).axi_write(address, value, delay=delay)
 
     def axi_read(self, address, delay=None):
         '''Read a value from AXI4-Lite.'''
         print("%d: 1 %x\n" % (delay, address))
         self.total_delay += delay
-        return super(NicaSimulation, self).axi_read(address, delay=delay)
 
 def ioctl_ioc(ioctl_dir, ioctl_type, ioctl_nr, size):
     '''Calculate ioctl number.'''
@@ -361,7 +358,6 @@ class NicaHardware(NICA):
 
     def axi_write(self, address, value, delay=None):
         os.pwrite(self.fpga_fd, self.int_struct.pack(value), address)
-        return super(NicaHardware, self).axi_write(address, value, delay=delay)
 
     def axi_read(self, address, delay=None):
         return self.int_struct.unpack(os.pread(self.fpga_fd, 4, address))[0]
