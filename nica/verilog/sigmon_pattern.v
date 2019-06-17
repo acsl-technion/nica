@@ -46,6 +46,7 @@ localparam
   reg [2:0] stream_data0_status, stream_data0_statusQ, stream_data1_status;
   reg [2:0] stream_data0_count, stream_data1_count;
   wire pattern_mode;
+  wire [3:0] pattern_source;
   wire [5:0] pattern_mask;
   wire [4:0] pattern_byte_count; // byte count within the data chunk
   wire [2:0] pattern_line_count; // stream line count, in which to look for the pattern
@@ -79,11 +80,17 @@ localparam
   assign merge_source = pattern_ctrl[19:16];
   assign pattern_mask = pattern_ctrl[13:8];
   assign pattern_line_count = pattern_ctrl[7:5];
+  assign pattern_source = pattern_ctrl[27:24];
   assign stream_sop = stream_eopQ & stream_vld & stream_rdy;
   assign stream_eop = stream_last & stream_vld & stream_rdy;
 
-// !!!====> recheck this comment:  byte_count within a 256bit data line is inverted, modulo 32 (1st bit of stream is axi4stream_data[255])
-  assign pattern_byte_count = pattern_ctrl[4:0];
+// !!!====> recheck this comment: In axistreams: byte_count within a 256bit data line is inverted, modulo 32 (1st bit of stream is axi4stream_data[255])
+// In aximm address sampling, byte_count is NOT inverted, thus must be re-adjusted
+  assign pattern_byte_count = (pattern_source > 4 & pattern_source < 9) ?
+			      // pattern source is either of the axi4mm addresses.
+			      // Set byte count to    max(d'26, (d'26 - pattern_ctrl[4:0])):
+			      ((pattern_ctrl[4:0] > 5'b11010) ? 5'b00000 : (6'b011010 - {1'b0, pattern_ctrl[4:0]})) : 
+			      pattern_ctrl[4:0];
 
   assign pattern_in = {pattern_h[15:0], pattern_l[31:0]};
   assign sample_data_out = sample_data_eop;

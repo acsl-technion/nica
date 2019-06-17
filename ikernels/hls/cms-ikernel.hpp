@@ -52,12 +52,12 @@ void cms_ikernel(hls_ik::ports& ik, hls_ik::ikernel_id& uuid,
                  ap_uint<32> k_value,
                  hls_ik::tc_ikernel_data_counts& tc);
 
-class cms : public hls_ik::ikernel, public hls_ik::virt_gateway_impl<cms> {
+class cms : public hls_ik::ikernel {
 public:
 
-    virtual void step(hls_ik::ports& ports, hls_ik::tc_ikernel_data_counts& tc);
-    virtual int reg_write(int address, int value, hls_ik::ikernel_id_t ikernel_id);
-    virtual int reg_read(int address, int* value, hls_ik::ikernel_id_t ikernel_id);
+    void step(hls_ik::ports& ports, hls_ik::tc_ikernel_data_counts& tc);
+    int reg_write(int address, int value, hls_ik::ikernel_id_t ikernel_id);
+    int reg_read(int address, int* value, hls_ik::ikernel_id_t ikernel_id);
 
     void write_to_heap(value_and_frequency& kv);
     void read_heap(hls::stream<value_and_frequency>& heap_out, ap_uint<32> k_value);

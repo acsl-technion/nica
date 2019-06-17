@@ -9,7 +9,8 @@
 #include <hls_helper.h>
 #include <mlx.h>
 #include <flow_table.hpp>
-#include <context_manager.hpp>
+#include <ntl/context_manager.hpp>
+#include <ntl/constexpr.hpp>
 #include "memcached_cache.hpp"
 #include "programmable_fifo.hpp"
 
@@ -34,7 +35,7 @@ DECLARE_TOP_FUNCTION(memcached_top);
 #define STRINGIZE_VALUE_OF(x) STRINGIZE(x)
 
 static constexpr const char* ASCII_MEMCACHED_VALUE_SIZE = STRINGIZE_VALUE_OF(MEMCACHED_VALUE_SIZE);
-static const unsigned LOG_DEFAULT_CACHE_SIZE = hls_helpers::log2(MEMCACHED_DEFAULT_CACHE_SIZE);
+static const unsigned LOG_DEFAULT_CACHE_SIZE = ntl::log2(MEMCACHED_DEFAULT_CACHE_SIZE);
 
 struct memcached_response {
     char data[REPLY_SIZE];
@@ -147,6 +148,14 @@ public:
 
 struct memcached_context {
     memcached_context() :
+            ring_id(0)
+    {}
+
+    hls_ik::ring_id_t ring_id;
+};
+
+struct memcached_stats_context {
+    memcached_stats_context() :
             get_requests(0),
             get_req_hit(0),
             get_req_dropped_hits(0),
@@ -156,8 +165,7 @@ struct memcached_context {
             get_response(0),
             h2n_unknown(0),
             backpressure_drop_count(0),
-            tc_backpressure_drop_count(0),
-            ring_id(0)
+            tc_backpressure_drop_count(0)
     {}
 
     ap_uint<32> get_requests,
@@ -170,7 +178,6 @@ struct memcached_context {
             h2n_unknown,
             backpressure_drop_count,
             tc_backpressure_drop_count;
-    hls_ik::ring_id_t ring_id;
 };
 
 struct memcached_cache_context {
@@ -179,13 +186,19 @@ struct memcached_cache_context {
     size_t log_size;
 };
 
-class memcached_cache_contexts : public context_manager<memcached_cache_context, MEMCACHED_LOG_RING_COUNT>
+class memcached_cache_contexts : public ntl::context_manager<memcached_cache_context, MEMCACHED_LOG_RING_COUNT>
 {
 public:
     int rpc(int address, int *value, hls_ik::ikernel_id_t ikernel_id, bool read);
 };
 
-class memcached_contexts : public context_manager<memcached_context, MEMCACHED_LOG_RING_COUNT>
+class memcached_stats_contexts : public ntl::context_manager<memcached_stats_context, MEMCACHED_LOG_RING_COUNT>
+{
+public:
+    int rpc(int address, int *value, hls_ik::ikernel_id_t ikernel_id, bool read);
+};
+
+class memcached_contexts : public ntl::context_manager<memcached_context, MEMCACHED_LOG_RING_COUNT>
 {
 public:
     int rpc(int address, int *value, hls_ik::ikernel_id_t ikernel_id, bool read);
@@ -193,11 +206,11 @@ public:
     hls_ik::ring_id_t find_ring(const hls_ik::ikernel_id_t& ikernel_id);
 };
 
-class memcached : public hls_ik::ikernel, public hls_ik::virt_gateway_impl<memcached> {
+class memcached : public hls_ik::ikernel {
 public:
-    virtual void step(hls_ik::ports& ports, hls_ik::tc_ikernel_data_counts& tc);
-    virtual int reg_write(int address, int value, hls_ik::ikernel_id_t ikernel_id);
-    virtual int reg_read(int address, int* value, hls_ik::ikernel_id_t ikernel_id);
+    void step(hls_ik::ports& ports, hls_ik::tc_ikernel_data_counts& tc);
+    int reg_write(int address, int value, hls_ik::ikernel_id_t ikernel_id);
+    int reg_read(int address, int* value, hls_ik::ikernel_id_t ikernel_id);
     memcached();
 
     typedef hls_ik::memory_t memory;
@@ -269,6 +282,7 @@ private:
 
     memcached_contexts ctx;
     memcached_cache_contexts cache_ctx;
+    memcached_stats_contexts stats_ctx;
 
     // handle_memory_responses state
     enum { MEM_RESP_IDLE, MEM_RESP_WAIT } mem_resp_state;

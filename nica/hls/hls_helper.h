@@ -229,54 +229,20 @@ void consume(hls::stream<T>& in, bool enabled)
 #endif
 }
 
-template <typename T>
-class constant_stream
-{
-public:
-    constant_stream(const T& value) : value(value) {}
+template <unsigned Width>
+unsigned char get_byte(const ap_uint<Width>& vec, const int i) {
+#pragma HLS inline
+    const int bottom = (Width - 1) - ((i + 1) * 8 - 1), top = (Width - 1) - (i * 8);
 
-    void operator()(hls::stream<T>& out)
-    {
-        if (!out.full())
-            out.write(value);
-    }
-
-    void operator()(hls::stream<T>& out, bool enabled)
-    {
-        if (enabled && !out.full())
-/* In simulation build we drive a FIFO, but with synthesis it is an AXI4-Stream.
- * This causes an error when trying to use write_nb about an interface mismatch:
- *
- *   CRITICAL WARNING: [XFORM 203-801] Interface write on 'out.V.V' has
- *   incompatible types. Possible cause(s): data pack is only applied on
- *   source(variable) or destination(port).
- */
-#ifdef SIMULATION_BUILD
-            out.write_nb(value);
-#else
-            out.write(value);
-#endif
-    }
-private:
-    T value;
-};
-
-template <typename T>
-constant_stream<T> constant(const T& value)
-{
-    return constant_stream<T>(value);
+    return vec(top, bottom);
 }
 
-template <typename T>
-void produce(hls::stream<T>& out)
-{
-    constant(T(0))(out);
-}
+template <unsigned Width>
+void write_byte(ap_uint<Width>& vec, const int i, const unsigned char val) {
+#pragma HLS inline
+    const int bottom = (Width - 1) - ((i + 1) * 8 - 1), top = (Width - 1) - (i * 8);
 
-template <typename T>
-void produce(hls::stream<T>& out, bool enabled)
-{
-    constant(T(0))(out, enabled);
+    vec(top, bottom) = val;
 }
 
 template <unsigned Size, typename T>
@@ -286,6 +252,50 @@ void memcpy(T *dest, const T *src) {
 #pragma HLS unroll
          dest[i] = src[i];
     }
+}
+
+template <unsigned Size, int Width, int Width2>
+void memcpy(ap_uint<Width>& dest, ap_uint<Width2>& src) {
+#pragma HLS inline
+    for (int i = 0; i < Size; ++i) {
+#pragma HLS unroll
+        write_byte<Width>(dest, i, get_byte<Width2>(src, i));
+    }
+}
+
+template <unsigned Size, int Width>
+void ap_uint_to_char(char *dst, ap_uint<Width>& src) {
+#pragma HLS inline
+    for (int i = 0; i < Size; ++i) {
+#pragma HLS unroll
+        dst[i] = get_byte<Width>(src, i);
+    }
+}
+
+template <unsigned Size, typename T>
+void memset(T *dest, T value) {
+#pragma HLS inline
+    for (int i = 0; i < Size; ++i) {
+#pragma HLS unroll
+        dest[i] = value;
+    }
+}
+
+inline int bytes_to_int(const unsigned char* bytes, const uint32_t offset) {
+#pragma HLS inline
+    return (bytes[4 * offset]) << 24 |
+           (bytes[4 * offset + 1] & 0xFF) << 16 |
+           (bytes[4 * offset + 2] & 0xFF) << 8 |
+           (bytes[4 * offset + 3] & 0xFF);
+}
+
+template <unsigned Width>
+inline void int_to_bytes(const int src, ap_uint<Width>& dest, const uint32_t offset) {
+#pragma HLS inline
+    write_byte<Width>(dest, 4 * offset, src >> 24);
+    write_byte<Width>(dest, 4 * offset + 1, src >> 16);
+    write_byte<Width>(dest, 4 * offset + 2, src >> 8);
+    write_byte<Width>(dest, 4 * offset + 3, src);
 }
 
 /* Zero out bytes in the data stream that have their keep bit cleared */
@@ -312,16 +322,6 @@ ap_uint<256> mask_last_word(axi word)
         result((i+1) * 8 - 1, i * 8) = ret[i];
 
     return result;
-}
-
-constexpr size_t log2(size_t n)
-{
-    return (n < 2) ? 0 : 1 + log2((n + 1) / 2);
-}
-
-template<typename T> constexpr
-T const& max(T const& a, T const& b) {
-    return a > b ? a : b;
 }
 
 } // namespace

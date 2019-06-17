@@ -122,9 +122,15 @@ class CLBEvents(IntEnum):
 class Event(object):
     '''Parsed events including metadata.'''
     def __init__(self, value):
+        if value is None:
+            self.event_id = None
+            self.clb_index = None
+            return
+
         try:
             self.event_id = Events(value)
             self.clb_index = None
+            return
         except ValueError:
             pass
 

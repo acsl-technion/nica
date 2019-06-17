@@ -31,9 +31,11 @@
 #include <uuid.h>
 #include <boost/operators.hpp>
 
+#include "hls_helper.h"
 #include "gateway.hpp"
 #include "ikernel-types.hpp"
-#include "hls_macros.hpp"
+#include <ntl/macros.hpp>
+#include <ntl/memory.hpp>
 #include "axi_data.hpp"
 #include <either.hpp>
 
@@ -300,65 +302,7 @@ static inline bool operator==(const credit_update_registers& l, const credit_upd
 /* Interface width also includes the ikernel ID */
 #define DDR_INTERFACE_WIDTH (10 + DDR_WIDTH)
 
-template <size_t _interface_width>
-class memory {
-public:
-    enum {
-        interface_width = _interface_width,
-    };
-    typedef ap_uint<512> value_t;
-    typedef ap_uint<interface_width - 6> index_t;
-
-    /* TODO pass other auxilary signals */
-
-    hls::stream<index_t> ar;
-    hls::stream<value_t> r;
-    hls::stream<index_t> aw;
-    hls::stream<value_t> w;
-    hls::stream<bool> b;
-
-    void write(index_t index, value_t value)
-    {
-#pragma HLS inline
-        aw.write(index);
-        w.write(value);
-    }
-
-    void post_read(index_t index)
-    {
-#pragma HLS inline
-        ar.write(index);
-    }
-
-    bool has_write_response()
-    {
-#pragma HLS inline
-        return !b.empty();
-    }
-
-    bool get_write_response()
-    {
-#pragma HLS inline
-        return b.read();
-    }
-
-    bool has_read_response()
-    {
-#pragma HLS inline
-        return !r.empty();
-    }
-
-    value_t get_read_response()
-    {
-#pragma HLS inline
-        return r.read();
-    }
-};
-
-typedef memory<DDR_INTERFACE_WIDTH> memory_t;
-
-/* Convince HLS that memory_t is used, and set the right stream directions */
-void memory_unused(memory_t& m, hls::stream<bool>& dummy_update);
+using memory_t = ntl::memory<DDR_INTERFACE_WIDTH, ntl::axi_stream_tag>;
 
 #define IKERNEL_NUM_EVENTS 8
 typedef ap_uint<1> trace_event;
@@ -390,13 +334,13 @@ struct ikernel_ring_context
 
 class ikernel {
 public:
-    ikernel() : dummy_update("dummy_update") {}
-    virtual ~ikernel() {}
+    ikernel() {}
+    ~ikernel() {}
 
-    virtual void step(ports& ports, tc_ikernel_data_counts& tc) = 0;
+    void step(ports& ports, tc_ikernel_data_counts& tc);
 
     /* For simulation: accessor functions to AXI4-Lite registers. */
-    virtual int reg_write(int address, int value, ikernel_id_t ikernel_id)
+    int reg_write(int address, int value, ikernel_id_t ikernel_id)
     {
         switch (address) {
         case 0:
@@ -408,7 +352,7 @@ public:
         return GW_DONE;
     }
 
-    virtual int reg_read(int address, int* value, ikernel_id_t ikernel_id)
+    int reg_read(int address, int* value, ikernel_id_t ikernel_id)
     {
         switch (address) {
         case 0:
@@ -425,10 +369,12 @@ public:
     /** Update all gateway related registers in here.
      *
      * Otherwise HLS is not happy (dataflow won't work). */
-    virtual void gateway_update() {}
+    void gateway_update() {}
 
     /* Called from the top function to queue credit updates */
     void host_credits_update(credit_update_registers& regs);
+
+    ntl::gateway_impl<int> gateway;
 protected:
     /* Helper functions to be used by an ikernel to implement flow control for
      * the custom ring */
@@ -450,10 +396,7 @@ protected:
      */
     bool update();
 
-protected:
-    /* Dummy boolean to make it easier to define unused HLS stream direction. Pass it
-     * to produce/consume function to trick HLS into thinking they are used. */
-    hls::stream<bool> dummy_update;
+    ntl::memory_unused memory_unused;
 
 private:
     ikernel_ring_context host_credits[1 << CUSTOM_RINGS_LOG_NUM]; // TODO magic number
@@ -474,22 +417,12 @@ static inline void link_pipeline_sim(hls_ik::pipeline_ports& in, hls_ik::pipelin
     hls_helpers::link_axi_stream(out.data_output, in.data_output);
 }
 
-static inline void link_mem_sim(hls_ik::memory_t& in, hls_ik::memory_t& out)
-{
-#pragma HLS inline
-    hls_helpers::link_axi_stream(out.aw, in.aw);
-    hls_helpers::link_axi_stream(out.w, in.w);
-    hls_helpers::link_axi_stream(out.ar, in.ar);
-    hls_helpers::link_axi_to_fifo(in.b, out.b);
-    hls_helpers::link_axi_to_fifo(in.r, out.r);
-}
-
 static inline void link_ports_sim(hls_ik::ports& in, hls_ik::ports& out)
 {
 #pragma HLS inline
     link_pipeline_sim(in.host, out.host);
     link_pipeline_sim(in.net, out.net);
-    link_mem_sim(in.mem, out.mem);
+    ntl::link(in.mem, out.mem);
 }
 
 } // namespace
@@ -518,10 +451,10 @@ static inline void link_ports_sim(hls_ik::ports& in, hls_ik::ports& out)
 
 
 #define IKERNEL_PIPELINE_PORTS_PRAGMAS(__pipeline) \
-    DO_PRAGMA(HLS interface axis port=__pipeline.metadata_input) \
-    DO_PRAGMA(HLS interface axis port=__pipeline.metadata_output) \
-    DO_PRAGMA(HLS interface axis port=__pipeline.data_input) \
-    DO_PRAGMA(HLS interface axis port=__pipeline.data_output)
+    DO_PRAGMA(HLS interface axis port=&__pipeline.metadata_input) \
+    DO_PRAGMA(HLS interface axis port=&__pipeline.metadata_output) \
+    DO_PRAGMA(HLS interface axis port=&__pipeline.data_input) \
+    DO_PRAGMA(HLS interface axis port=&__pipeline.data_output)
 
 #define IKERNEL_TC_PIPELINE_PRAGMAS(__tc_pipeline) \
     TC_COUNTS_PRAGMAS(__tc_pipeline.tc_data_counts) \
@@ -539,11 +472,7 @@ static inline void link_ports_sim(hls_ik::ports& in, hls_ik::ports& out)
     IKERNEL_PIPELINE_PORTS_PRAGMAS(__ports.net) \
     IKERNEL_PIPELINE_PORTS_PRAGMAS(__ports.host) \
     IKERNEL_CREDIT_REGS_PRAGMAS(__ports.host_credit_regs, 0x1050) \
-    DO_PRAGMA_SYN(HLS interface axis port=__ports.mem.ar) \
-    DO_PRAGMA_SYN(HLS interface axis port=__ports.mem.r) \
-    DO_PRAGMA_SYN(HLS interface axis port=__ports.mem.aw) \
-    DO_PRAGMA_SYN(HLS interface axis port=__ports.mem.w) \
-    DO_PRAGMA_SYN(HLS interface axis port=__ports.mem.b) \
+    NTL_MEMORY_INTERFACE_PRAGMA(__ports.mem) \
     DO_PRAGMA(HLS array_partition variable=__ports.events complete) \
     DO_PRAGMA(HLS interface ap_none port=__ports.events)
 
@@ -568,10 +497,16 @@ DECLARE_TOP_FUNCTION(__name) \
     DO_PRAGMA_SIM(HLS stream variable=ports_buf.net.metadata_input depth=256); \
     DO_PRAGMA_SIM(HLS stream variable=ports_buf.net.data_input depth=256); \
     using namespace hls_ik; \
-    static const ikernel_id __constant_uuid = { __uuid }; \
+    constexpr ikernel_id __constant_uuid = { __uuid }; \
     INSTANCE(__class).host_credits_update(ik.host_credit_regs); \
     INSTANCE(__class).step(IF_SIM(ports_buf, ik), tc); \
-    INSTANCE(__class).gateway(&INSTANCE(__class), gateway); \
+    INSTANCE(__class).gateway.gateway(gateway.common, [=](ap_uint<31> addr, int& data) -> int { \
+        DO_PRAGMA(HLS inline) \
+        if (addr & GW_WRITE) \
+            return INSTANCE(__class).reg_write(addr & ~GW_WRITE, data, gateway.ikernel_id); \
+        else \
+            return INSTANCE(__class).reg_read(addr & ~GW_WRITE, &data, gateway.ikernel_id); \
+    }); \
     output_uuid: uuid = __constant_uuid; \
 }
 

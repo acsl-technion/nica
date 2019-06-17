@@ -39,7 +39,7 @@ pktgen::pktgen() :
 void pktgen::step(hls_ik::ports& p, hls_ik::tc_ikernel_data_counts& tc)
 {
 #pragma HLS inline
-    memory_unused(p.mem, dummy_update);
+    memory_unused.step(p.mem);
     data_plane(p.host, tc.host);
     sched_wrapper();
     pass_packets(p.net);

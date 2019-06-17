@@ -22,12 +22,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <ntl/constexpr.hpp>
 #include "hls_helper.h"
 
 #pragma once
 
 /* A FIFO that provides backpressure when it has X elements left. */
-template <typename T, size_t stream_depth = 15, size_t index_width = 1 + hls_helpers::log2(stream_depth)>
+template <typename T, size_t stream_depth = 15, size_t index_width = 1 + ntl::log2(stream_depth)>
 class programmable_fifo
 {
 public:

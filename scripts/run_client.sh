@@ -22,7 +22,7 @@ if [[ "${#libvma_dirs}" -eq 0 ]] ; then
     echo "Error: couldn't find libvma dir."
 fi
 libvma_dir=${libvma_dirs[0]}
-client=$basedir/../build/baseline/client
+client=$basedir/../build/software/client
 # Find an mlx5_core netdev
 dev=$($basedir/mlx_netdev.sh)
 # Find local IP address

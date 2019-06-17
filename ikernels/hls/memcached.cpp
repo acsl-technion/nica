@@ -26,28 +26,43 @@ int memcached_contexts::rpc(int address, int *v, ikernel_id_t ikernel_id, bool r
     uint32_t index = ikernel_id;
 
     switch(address) {
-        case MEMCACHED_STATS_GET_REQUESTS:
-            return gateway_access_field<ap_uint<32>, &memcached_context::get_requests>(index, v, read);
-        case MEMCACHED_STATS_GET_REQUESTS_HITS:
-            return gateway_access_field<ap_uint<32>, &memcached_context::get_req_hit>(index, v, read);
-        case MEMCACHED_STATS_GET_REQUESTS_MISSES:
-            return gateway_access_field<ap_uint<32>, &memcached_context::get_req_miss>(index, v, read);
-        case MEMCACHED_STATS_SET_REQUESTS:
-            return gateway_access_field<ap_uint<32>, &memcached_context::set_requests>(index, v, read);
-        case MEMCACHED_STATS_N2H_UNKNOWN:
-            return gateway_access_field<ap_uint<32>, &memcached_context::n2h_unknown>(index, v, read);
-        case MEMCACHED_STATS_GET_RESPONSE:
-            return gateway_access_field<ap_uint<32>, &memcached_context::get_response>(index, v, read);
-        case MEMCACHED_STATS_H2N_UNKNOWN:
-            return gateway_access_field<ap_uint<32>, &memcached_context::h2n_unknown>(index, v, read);
-        case MEMCACHED_DROPPED_BACKPRESSURE:
-            return gateway_access_field<ap_uint<32>, &memcached_context::backpressure_drop_count>(index, v, read);
-        case MEMCACHED_STATS_DROPPED_TC_BACKPRESSURE:
-            return gateway_access_field<ap_uint<32>, &memcached_context::tc_backpressure_drop_count>(index, v, read);
         case MEMCACHED_RING_ID:
             return gateway_access_field<ring_id_t, &memcached_context::ring_id>(index, v, read);
+        default:
+            if (read)
+                *v = -1;
+            return GW_FAIL;
+    }
+
+    return GW_DONE;
+}
+
+int memcached_stats_contexts::rpc(int address, int *v, ikernel_id_t ikernel_id, bool read)
+{
+#pragma HLS inline
+    uint32_t index = ikernel_id;
+
+    switch(address) {
+        case MEMCACHED_STATS_GET_REQUESTS:
+            return gateway_access_field<ap_uint<32>, &memcached_stats_context::get_requests>(index, v, read);
+        case MEMCACHED_STATS_GET_REQUESTS_HITS:
+            return gateway_access_field<ap_uint<32>, &memcached_stats_context::get_req_hit>(index, v, read);
+        case MEMCACHED_STATS_GET_REQUESTS_MISSES:
+            return gateway_access_field<ap_uint<32>, &memcached_stats_context::get_req_miss>(index, v, read);
+        case MEMCACHED_STATS_SET_REQUESTS:
+            return gateway_access_field<ap_uint<32>, &memcached_stats_context::set_requests>(index, v, read);
+        case MEMCACHED_STATS_N2H_UNKNOWN:
+            return gateway_access_field<ap_uint<32>, &memcached_stats_context::n2h_unknown>(index, v, read);
+        case MEMCACHED_STATS_GET_RESPONSE:
+            return gateway_access_field<ap_uint<32>, &memcached_stats_context::get_response>(index, v, read);
+        case MEMCACHED_STATS_H2N_UNKNOWN:
+            return gateway_access_field<ap_uint<32>, &memcached_stats_context::h2n_unknown>(index, v, read);
+        case MEMCACHED_DROPPED_BACKPRESSURE:
+            return gateway_access_field<ap_uint<32>, &memcached_stats_context::backpressure_drop_count>(index, v, read);
+        case MEMCACHED_STATS_DROPPED_TC_BACKPRESSURE:
+            return gateway_access_field<ap_uint<32>, &memcached_stats_context::tc_backpressure_drop_count>(index, v, read);
         case MEMCACHED_STATS_GET_REQUESTS_DROPPED_HITS:
-            return gateway_access_field<ap_uint<32>, &memcached_context::get_req_dropped_hits>(index, v, read);
+            return gateway_access_field<ap_uint<32>, &memcached_stats_context::get_req_dropped_hits>(index, v, read);
         default:
             if (read)
                 *v = -1;
@@ -214,9 +229,8 @@ void memcached::drop_or_pass(hls_ik::pipeline_ports& in) {
 
 void memcached::action_resolution(hls_ik::pipeline_ports& in,
                                   hls_ik::tc_pipeline_data_counts& tc) {
-#pragma HLS pipeline enable_flush ii=4
+#pragma HLS pipeline enable_flush ii=3
     _action_stream.empty_progress();
-    update_stats();
 
     if (ctx.update())
         return;
@@ -337,8 +351,6 @@ void memcached::parse_packet(hls_ik::trace_event events[IKERNEL_NUM_EVENTS]) {
         case DATA: {
             const bool requests_full = _req_prs2mem.full();
             events[MEMCACHED_EVENT_PARSED_REQUESTS_STREAM_FULL] = requests_full;
-            events[MEMCACHED_EVENT_PARSED_REQUESTS_STREAM_FULL_INTERNAL] =
-                    _req_prs2mem.internal_full();
             if (!_parser_data.empty() && !requests_full) {
                 axi_data d = _parser_data.read();
 
@@ -375,7 +387,7 @@ void memcached::parse_packet(hls_ik::trace_event events[IKERNEL_NUM_EVENTS]) {
 
 void memcached::handle_parsed_packet(memory& m, hls_ik::trace_event events[IKERNEL_NUM_EVENTS])
 {
-#pragma HLS pipeline enable_flush ii=4
+#pragma HLS pipeline enable_flush ii=3
 
     _kv_pairs_stream.empty_progress();
     _req_prs2mem.empty_progress();
@@ -416,7 +428,7 @@ void memcached::handle_parsed_packet(memory& m, hls_ik::trace_event events[IKERN
 }
 
 void memcached::handle_memory_responses(memory& m, hls_ik::tc_pipeline_data_counts& tc_host) {
-#pragma HLS pipeline enable_flush ii=4
+#pragma HLS pipeline enable_flush ii=3
     bool pass_to_host = true;
     ikernel_id_t id;
 
@@ -446,7 +458,7 @@ void memcached::handle_memory_responses(memory& m, hls_ik::tc_pipeline_data_coun
             if (!_index.has_find_result(m))
                 return;
 
-            maybe<memcached_value<MEMCACHED_VALUE_SIZE> > found = _index.get_find_result(m);
+            ntl::maybe<memcached_value<MEMCACHED_VALUE_SIZE> > found = _index.get_find_result(m);
 
             if (found.valid()) {
                 pass_to_host = false;
@@ -492,11 +504,14 @@ int memcached::reg_write(int address, int value, ikernel_id_t ikernel_id)
         return GW_FAIL;
     }
 
-    if (address == MEMCACHED_REG_CACHE_SIZE) {
+    switch (address) {
+    case MEMCACHED_REG_CACHE_SIZE:
         return cache_ctx.rpc(address, &value, ikernel_id, false);
+    case MEMCACHED_RING_ID:
+        return ctx.rpc(address, &value, ikernel_id, false);
+    default:
+        return stats_ctx.rpc(address, &value, ikernel_id, false);
     }
-
-    return ctx.rpc(address, &value, ikernel_id, false);
 }
 
 
@@ -507,22 +522,28 @@ int memcached::reg_read(int address, int* value, ikernel_id_t ikernel_id) {
         return GW_FAIL;
     }
 
-    if (address == MEMCACHED_REG_CACHE_SIZE) {
+    switch (address) {
+    case MEMCACHED_REG_CACHE_SIZE:
         return cache_ctx.rpc(address, value, ikernel_id, true);
+    case MEMCACHED_RING_ID:
+        return ctx.rpc(address, value, ikernel_id, true);
+    default:
+        return stats_ctx.rpc(address, value, ikernel_id, true);
     }
-
-    return ctx.rpc(address, value, ikernel_id, true);
 }
 
 void memcached::update_stats()
 {
-#pragma HLS inline
+#pragma HLS pipeline enable_flush ii=3
     ikernel_id_t id;
+
+    if (stats_ctx.update())
+        return;
 
     if (!_n2h_stats.empty()) {
         request_type req;
         std::tie(id, req) =  _n2h_stats.read();
-        memcached_context& c = ctx[id];
+        memcached_stats_context& c = stats_ctx[id];
 
         switch (req) {
         case GET:
@@ -540,7 +561,7 @@ void memcached::update_stats()
     if (!_h2n_stats.empty()) {
         h2n_packet_type resp;
         std::tie(id, resp) = _h2n_stats.read();
-        memcached_context& c = ctx[id];
+        memcached_stats_context& c = stats_ctx[id];
 
         switch (resp) {
         case H2N_GET_RESPONSE:
@@ -555,7 +576,7 @@ void memcached::update_stats()
     if (!_stats_cache.empty()) {
         cache_stats_type type;
         std::tie(id, type) = _stats_cache.read();
-        memcached_context &c = ctx[id];
+        memcached_stats_context& c = stats_ctx[id];
 
         switch (type) {
             case STAT_HIT_GEN:
@@ -576,7 +597,7 @@ void memcached::update_stats()
     if (!_backpressure_drop.empty()) {
         bool hit;
         std::tie(id, hit) = _backpressure_drop.read();
-        memcached_context& c = ctx[id];
+        memcached_stats_context& c = stats_ctx[id];
 
         ++c.backpressure_drop_count;
     }
@@ -595,6 +616,7 @@ void memcached::step(hls_ik::ports& p, hls_ik::tc_ikernel_data_counts& tc)
     reply_cached_value(p.host);
     intercept_out(p.host, tc.host);
     h2n_arb.arbitrate(p.host.metadata_output, p.host.data_output);
+    update_stats();
 }
 
 DEFINE_TOP_FUNCTION(memcached_top, memcached, MEMCACHED_UUID)

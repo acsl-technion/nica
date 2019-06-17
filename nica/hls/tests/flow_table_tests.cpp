@@ -23,6 +23,8 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
+#define CACHE_ENABLE_DEBUG_COMMANDS
+
 #include "flow_table_impl.hpp"
 #include "ikernel_tests.hpp"
 #include "gtest/gtest.h"
@@ -37,6 +39,9 @@ using std::get;
 using udp::header_stream;
 
 using hls_ik::gateway_registers;
+
+using ntl::maybe;
+using ntl::make_maybe;
 
 void flow_table_top(header_stream& header, result_stream& result,
                     gateway_registers& g);

@@ -31,7 +31,7 @@
 
 #include "flow_table.hpp"
 #include "ikernel.hpp"
-#include "cache.hpp"
+#include <ntl/cache.hpp>
 
 namespace udp {
     struct header_parser;
@@ -72,25 +72,27 @@ struct flow {
     }
 };
 
-template <>
-struct pack<flow> {
-    static const int width = 16 * 2 + 32 * 2 + hls_ik::vm_id_t::width;
+namespace ntl {
+    template <>
+    struct pack<flow> {
+        static const int width = 16 * 2 + 32 * 2 + hls_ik::vm_id_t::width;
 
-    static ap_uint<width> to_int(const flow& e) {
-        return (e.source_port, e.dest_port, e.saddr, e.daddr, e.vm_id);
-    }
+        static ap_uint<width> to_int(const flow& e) {
+            return (e.source_port, e.dest_port, e.saddr, e.daddr, e.vm_id);
+        }
 
-    static flow from_int(const ap_uint<width>& d) {
-        auto e = flow(
-            d(hls_ik::vm_id_t::width + 96 - 1, hls_ik::vm_id_t::width + 80),
-            d(hls_ik::vm_id_t::width + 80 - 1, hls_ik::vm_id_t::width + 64),
-            d(hls_ik::vm_id_t::width + 64 - 1, hls_ik::vm_id_t::width + 32),
-            d(hls_ik::vm_id_t::width + 32 - 1, hls_ik::vm_id_t::width),
-            d(hls_ik::vm_id_t::width      - 1, 0)
-        );
-        return e;
-    }
-};
+        static flow from_int(const ap_uint<width>& d) {
+            auto e = flow(
+                d(hls_ik::vm_id_t::width + 96 - 1, hls_ik::vm_id_t::width + 80),
+                d(hls_ik::vm_id_t::width + 80 - 1, hls_ik::vm_id_t::width + 64),
+                d(hls_ik::vm_id_t::width + 64 - 1, hls_ik::vm_id_t::width + 32),
+                d(hls_ik::vm_id_t::width + 32 - 1, hls_ik::vm_id_t::width),
+                d(hls_ik::vm_id_t::width      - 1, 0)
+            );
+            return e;
+        }
+    };
+}
 
 std::size_t hash_value(flow f);
 ::std::ostream& operator<<(::std::ostream& out, const flow& v);
@@ -111,27 +113,29 @@ struct flow_table_value : public boost::equality_comparable<flow_table_value> {
     }
 };
 
-template <>
-struct pack<flow_table_value> {
-    static const int width = 2 + pack<hls_ik::engine_id_t>::width + pack<hls_ik::ikernel_id_t>::width;
+namespace ntl {
+    template <>
+    struct pack<flow_table_value> {
+        static const int width = 2 + pack<hls_ik::engine_id_t>::width + pack<hls_ik::ikernel_id_t>::width;
 
-    typedef flow_table_value type;
+        typedef flow_table_value type;
 
-    static ap_uint<width> to_int(const type& e) {
-        return (ap_uint<2>(e.action),
-                e.engine_id,
-                e.ikernel_id);
-    }
+        static ap_uint<width> to_int(const type& e) {
+            return (ap_uint<2>(e.action),
+                    e.engine_id,
+                    e.ikernel_id);
+        }
 
-    static type from_int(const ap_uint<width>& d) {
-        auto e = flow_table_value(
-            flow_table_action(int(d(width - 1, width - 2))),
-            d(width - 3, width - 2 - pack<hls_ik::engine_id_t>::width),
-            d(pack<hls_ik::ikernel_id_t>::width - 1, 0)
-        );
-        return e;
-    }
-};
+        static type from_int(const ap_uint<width>& d) {
+            auto e = flow_table_value(
+                flow_table_action(int(d(width - 1, width - 2))),
+                d(width - 3, width - 2 - pack<hls_ik::engine_id_t>::width),
+                d(pack<hls_ik::ikernel_id_t>::width - 1, 0)
+            );
+            return e;
+        }
+    };
+}
 
 ::std::ostream& operator<<(::std::ostream& out, const flow_table_value& v);
 
@@ -146,9 +150,9 @@ struct flow_table_result {
 
 typedef hls::stream<flow_table_result> result_stream;
 
-typedef hash_table_wrapper<flow, flow_table_value, FLOW_TABLE_SIZE> hash_flow_table_t;
+typedef ntl::hash_table_wrapper<flow, flow_table_value, FLOW_TABLE_SIZE> hash_flow_table_t;
 
-class flow_table : public hls_ik::gateway_impl<flow_table> {
+class flow_table {
 public:
     flow_table() { reset(); }
     void ft_step(udp::header_stream& header, result_stream& result,
@@ -169,5 +173,7 @@ private:
     flow_table_value gateway_result;
     bool gateway_valid;
     int fields;
+
+    ntl::gateway_impl<int> gateway;
 };
 

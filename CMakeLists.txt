@@ -18,13 +18,14 @@ set(GTEST_ROOT "$ENV{GTEST_ROOT}" CACHE PATH "Root directory of gtest installati
 find_package(GTest REQUIRED)
 
 set(XILINX_VIVADO_VERSION "$ENV{XILINX_VIVADO_VERSION}" CACHE STRING
-    "Version of Vivado to use (2016.2 or 2016.4)")
+    "Version of Vivado to use (2016.2 or 2018.2)")
 
 find_path(XILINX_VIVADO_HLS
     "include/hls_stream.h"
     HINTS /opt/Xilinx/Vivado_HLS/${XILINX_VIVADO_VERSION}
-    PATHS /opt/Xilinx/Vivado_HLS/2016.2
-          /opt/Xilinx/Vivado_HLS/2016.4
+          /opt/Xilinx/Vivado/${XILINX_VIVADO_VERSION}
+    PATHS /opt/Xilinx/Vivado/2018.2
+          /opt/Xilinx/Vivado_HLS/2016.2
     DOC "Xilinx Vivado HLS include directory")
 
 set(XILINX_VIVADO_HLS_INCLUDE "${XILINX_VIVADO_HLS}/include")
@@ -44,17 +45,16 @@ include_directories(
   ${GTEST_INCLUDE_DIRS}
   ${UUID_INCLUDE_DIRS}
   ${XILINX_VIVADO_HLS_INCLUDE}
+  ntl/
 )
 
 # pthreads
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
 
-link_directories(../googletest/googlemock/gtest)
-
 if(BUILD_SOFTWARE)
     add_subdirectory(libnica)
-    add_subdirectory(baseline)
+    add_subdirectory(software)
 endif()
 
 function(hls_target proj hls_target_name sources testbench_sources top_function)

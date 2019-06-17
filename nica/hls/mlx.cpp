@@ -25,6 +25,7 @@
 
 #include <mlx.h>
 #include <udp.h>
+#include <ntl/link.hpp>
 
 namespace mlx {
 
@@ -55,13 +56,13 @@ void dropper::step(stream& in, hls::stream<bool>& pass_stream, stream& out)
     }
 }
 
-std::tuple<metadata, hls_ik::axi_data> split_metadata(const axi4s& in)
+metadata_and_data split_metadata(const axi4s& in)
 {
     return std::make_tuple(metadata(in.user, in.id),
                            hls_ik::axi_data(in.data, in.keep, in.last));
 }
 
-axi4s join_metadata(const std::tuple<metadata, hls_ik::axi_data>& in)
+axi4s join_metadata(const metadata_and_data& in)
 {
     metadata m;
     hls_ik::axi_data d;
@@ -96,6 +97,28 @@ void join_packet_metadata::operator()(metadata_stream& meta_in,
 std::ostream& operator<<(::std::ostream& out, const metadata& m)
 {
     return out << "mlx::metadata(user=" << m.user << ", id=" << m.id << ")";
+}
+
+void extract_metadata::step(stream& in)
+{
+    ntl::link(in, _enum_in);
+    _enum.step(_enum_in);
+    {
+        if (_enum.out.empty() || out_data.full() || out_metadata.full())
+            return;
+
+        int count;
+        axi4s flit;
+        std::tie(count, flit) = _enum.out.read();
+
+        metadata m;
+        ntl::axi_data axi_data_flit;
+        std::tie(m, axi_data_flit) = split_metadata(flit);
+
+        if (count == 0)
+            out_metadata.write(m);
+        out_data.write(axi_data_flit);
+    }
 }
 
 }

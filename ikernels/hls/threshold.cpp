@@ -203,7 +203,7 @@ void threshold::step(hls_ik::ports& p, hls_ik::tc_ikernel_data_counts& tc)
     DO_PRAGMA(HLS stream variable=data_dup_to_parser depth=2)
     DO_PRAGMA(HLS stream variable=data_dup_to_egress depth=15)
 
-    memory_unused(p.mem, dummy_update);
+    memory_unused.step(p.mem);
     pass_packets(p.host);
     hls_helpers::dup(p.net.data_input, data_dup_to_parser, data_dup_to_egress);
     parser();

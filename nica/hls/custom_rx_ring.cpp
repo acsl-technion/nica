@@ -52,7 +52,14 @@ void custom_rx_ring::custom_ring(udp::udp_builder_metadata_stream& hdr_in, data_
                                  hls_ik::gateway_registers& r)
 {
 #pragma HLS inline
-    gateway(this, r);
+    gateway.gateway(r, [=](ap_uint<31> addr, int& data) -> int {
+#pragma HLS inline
+        if (addr & hls_ik::GW_WRITE)
+            return reg_write(addr & ~hls_ik::GW_WRITE, data);
+        else
+            return reg_read(addr & ~hls_ik::GW_WRITE, &data);
+    });
+
     ring_hdrs(hdr_in, hdr_out);
     dup(enable_stream, enable_bth, enable_icrc);
     dup(empty_packet, empty_packet_bth, empty_packet_icrc);
@@ -258,6 +265,7 @@ void custom_ring_top(udp::udp_builder_metadata_stream& hdr_in, data_stream& data
     udp::udp_builder_metadata_stream hdr_out, data_stream& data_out,
     hls_ik::gateway_registers& r)
 {
+#pragma HLS dataflow
     static custom_rx_ring ring;
     ring.custom_ring(hdr_in, data_in, hdr_out, data_out, r);
 }

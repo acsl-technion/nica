@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -e
 #
 # Copyright (c) 2016-2017 Haggai Eran, Gabi Malka, Lior Zeno, Maroun Tork
 # All rights reserved.
@@ -24,7 +24,7 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-tarball=${1:-newton_ku060_2_40g_v640.tar}
+tarball=$(readlink -f ${1:-newton_ku060_2_40g_v640.tar})
 
 if [ "$#" -lt 1 ] ; then
   echo "Missing argument: tarball"
@@ -37,15 +37,18 @@ if [ ! -f "$tarball" ] ; then
 fi
 
 rm -rf user
+mkdir -p user
+cd user
 
-dirs=(user/{examples/exp_hls/{vlog,xdc},mlx,project,scripts,tb/exp_vlog})
+dirs=({examples/exp_hls/{vlog,xdc},mlx,project,scripts,tb/exp_vlog})
 tar xvf $tarball ${dirs[@]}
+cd ..
 patch -p1 -d user < ../scripts/mellanox-shell-scripts.patch
 
 ln -snf examples/exp_hls user/sources
 
 ln -snf ../../../../nica/nica/40Gbps/impl/ip/hdl/verilog user/examples/exp_hls/vlog/nica
-for ikernel in cms echo memcached passthrough pktgen threshold ; do
+for ikernel in cms echo memcached passthrough pktgen threshold coap ; do
   ln -snf ../../../../ikernels/$ikernel/40Gbps/impl/ip/hdl/verilog user/examples/exp_hls/vlog/$ikernel
 done
 
@@ -53,3 +56,10 @@ ln -snf ../../../../nica/xci user/examples/exp_hls/xci
 cd user/examples/exp_hls/vlog
 cp -sf ../../../../../nica/verilog/* .
 cd -
+
+# Disable XDC as it has been removed from the repository
+# (coap now works with a single clock)
+#
+# cd user/examples/exp_hls/xdc
+# cp -sf ../../../../../ikernels/xdc/* .
+# cd -

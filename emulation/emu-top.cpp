@@ -54,10 +54,9 @@ namespace emulation {
         {
             switch (address) {
             case 0x0: {
-                uint32_t cmd = gateway.cmd.addr | (gateway.cmd.write << 30) | (gateway.cmd.go << 31);
+                uint32_t cmd = gateway.cmd.addr | (gateway.cmd.go << 31);
                 var_access(cmd, value, read);
-                gateway.cmd.addr = cmd & 0x3fffffff;
-                gateway.cmd.write = cmd >> 30;
+                gateway.cmd.addr = cmd & 0x7fffffff;
                 gateway.cmd.go = cmd >> 31;
                 break;
             }

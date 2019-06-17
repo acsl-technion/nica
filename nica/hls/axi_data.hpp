@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2016-2017 Haggai Eran, Gabi Malka, Lior Zeno, Maroun Tork
+// Copyright (c) 2016-2019 Haggai Eran, Gabi Malka, Lior Zeno, Maroun Tork
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without modification,
@@ -25,66 +25,10 @@
 
 #pragma once
 
-#include <boost/operators.hpp>
+#include <ntl/axi_data.hpp>
 
 namespace hls_ik {
-
-    struct axi_data : public boost::equality_comparable<axi_data> {
-        ap_uint<256> data;
-        ap_uint<32> keep;
-        ap_uint<1> last;
-
-        axi_data() {}
-        axi_data(const ap_uint<256>& data, const ap_uint<32>& keep, bool last) :
-            data(data), keep(keep), last(last) {}
-
-        static ap_uint<32> keep_bytes(const ap_uint<6>& valid_bytes)
-        {
-            return 0xffffffff ^ ((1 << (32 - valid_bytes)) - 1);
-        }
-
-        void set_data(const char *d, const ap_uint<6>& valid_bytes)
-        {
-            keep = keep_bytes(valid_bytes);
-            for (int byte = 0; byte < 32; ++byte) {
-#pragma HLS unroll
-                const char data_word = (byte < valid_bytes) ? d[byte] : 0;
-                data(data.width - 1 - 8 * byte, data.width - 8 - 8 * byte) = data_word;
-            }
-        }
-
-        int get_data(char *d) const
-        {
-            for (int byte = 0; byte < 32; ++byte) {
-#pragma HLS unroll
-                const uint8_t cur = data(data.width - 1 - 8 * byte, data.width - 8 - 8 * byte);
-                if (keep[31 - byte])
-                    d[byte] = cur;
-                else
-                    return byte;
-            }
-
-            return 32;
-        }
-
-        bool operator ==(const axi_data& other) const { return data == other.data && keep == other.keep && last == other.last; }
-
-        static const int width = 256 + 32 + 1;
-
-        axi_data(const ap_uint<width> d) :
-            data(d(288, 33)),
-            keep(d(32, 1)),
-            last(d(0, 0))
-        {}
-
-        operator ap_uint<width>() {
-            return (data, keep, last);
-        }
-    };
-
-    static inline std::ostream& operator <<(std::ostream& out, const axi_data& d) {
-        return out << "axi_data(" << std::hex << d.data << ", keep=" << d.keep << (d.last ? ", last)" : ")");
-    }
+    using ntl::axi_data;
 
     typedef hls::stream<ap_uint<axi_data::width> > data_stream;
 }

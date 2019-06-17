@@ -30,147 +30,147 @@
 `define SIGMON_ENABLE 1
 `endif
 
-module ku060_all_exp_hls_wrapper(sbu2mlx_ieee_vendor_id, sbu2mlx_product_id, sbu2mlx_product_version, sbu2mlx_caps, sbu2mlx_caps_len,
-                      sbu2mlx_caps_addr, mlx2sbu_clk, mlx2sbu_reset, sbu2mlx_leds_on, sbu2mlx_leds_blink, sbu2mlx_watchdog, mlx2sbu_axi4lite_aw_rdy, mlx2sbu_axi4lite_aw_vld, mlx2sbu_axi4lite_aw_addr, mlx2sbu_axi4lite_aw_prot,
-                      mlx2sbu_axi4lite_w_rdy, mlx2sbu_axi4lite_w_vld, mlx2sbu_axi4lite_w_data, mlx2sbu_axi4lite_w_strobe, mlx2sbu_axi4lite_b_rdy, mlx2sbu_axi4lite_b_vld, mlx2sbu_axi4lite_b_resp, mlx2sbu_axi4lite_ar_rdy, mlx2sbu_axi4lite_ar_vld, mlx2sbu_axi4lite_ar_addr,
-                      mlx2sbu_axi4lite_ar_prot, mlx2sbu_axi4lite_r_rdy, mlx2sbu_axi4lite_r_vld, mlx2sbu_axi4lite_r_data, mlx2sbu_axi4lite_r_resp, sbu2mlx_axi4mm_aw_rdy, sbu2mlx_axi4mm_aw_vld, sbu2mlx_axi4mm_aw_addr, sbu2mlx_axi4mm_aw_burst, sbu2mlx_axi4mm_aw_cache,
-                      sbu2mlx_axi4mm_aw_id, sbu2mlx_axi4mm_aw_len, sbu2mlx_axi4mm_aw_lock, sbu2mlx_axi4mm_aw_prot, sbu2mlx_axi4mm_aw_qos, sbu2mlx_axi4mm_aw_region, sbu2mlx_axi4mm_aw_size, sbu2mlx_axi4mm_w_rdy, sbu2mlx_axi4mm_w_vld, sbu2mlx_axi4mm_w_data,
-                      sbu2mlx_axi4mm_w_last, sbu2mlx_axi4mm_w_strobe, sbu2mlx_axi4mm_b_rdy, sbu2mlx_axi4mm_b_vld, sbu2mlx_axi4mm_b_id, sbu2mlx_axi4mm_b_resp, sbu2mlx_axi4mm_ar_rdy, sbu2mlx_axi4mm_ar_vld, sbu2mlx_axi4mm_ar_addr, sbu2mlx_axi4mm_ar_burst,
-                      sbu2mlx_axi4mm_ar_cache, sbu2mlx_axi4mm_ar_id, sbu2mlx_axi4mm_ar_len, sbu2mlx_axi4mm_ar_lock, sbu2mlx_axi4mm_ar_prot, sbu2mlx_axi4mm_ar_qos, sbu2mlx_axi4mm_ar_region, sbu2mlx_axi4mm_ar_size, sbu2mlx_axi4mm_r_rdy, sbu2mlx_axi4mm_r_vld,
-                      sbu2mlx_axi4mm_r_data, sbu2mlx_axi4mm_r_id, sbu2mlx_axi4mm_r_last, sbu2mlx_axi4mm_r_resp, mlx2sbu_axi4stream_rdy, mlx2sbu_axi4stream_vld, mlx2sbu_axi4stream_tdata, mlx2sbu_axi4stream_tkeep, mlx2sbu_axi4stream_tlast, mlx2sbu_axi4stream_tuser,
-                      mlx2sbu_axi4stream_tid, sbu2mlx_axi4stream_rdy, sbu2mlx_axi4stream_vld, sbu2mlx_axi4stream_tdata, sbu2mlx_axi4stream_tkeep, sbu2mlx_axi4stream_tlast, sbu2mlx_axi4stream_tuser, sbu2mlx_axi4stream_tid, nwp2sbu_axi4stream_rdy, nwp2sbu_axi4stream_vld,
-                      nwp2sbu_axi4stream_tdata, nwp2sbu_axi4stream_tkeep, nwp2sbu_axi4stream_tlast, nwp2sbu_axi4stream_tuser, nwp2sbu_axi4stream_tid, sbu2nwp_axi4stream_rdy, sbu2nwp_axi4stream_vld, sbu2nwp_axi4stream_tdata, sbu2nwp_axi4stream_tkeep, sbu2nwp_axi4stream_tlast,
-                      sbu2nwp_axi4stream_tuser, sbu2nwp_axi4stream_tid, cxp2sbu_axi4stream_rdy, cxp2sbu_axi4stream_vld, cxp2sbu_axi4stream_tdata, cxp2sbu_axi4stream_tkeep, cxp2sbu_axi4stream_tlast, cxp2sbu_axi4stream_tuser, cxp2sbu_axi4stream_tid, sbu2cxp_axi4stream_rdy,
-                      sbu2cxp_axi4stream_vld, sbu2cxp_axi4stream_tdata, sbu2cxp_axi4stream_tkeep, sbu2cxp_axi4stream_tlast, sbu2cxp_axi4stream_tuser, sbu2cxp_axi4stream_tid, nwp2sbu_lossy_has_credits, nwp2sbu_lossless_has_credits, cxp2sbu_lossy_has_credits, cxp2sbu_lossless_has_credits);
+module exp_hls(sbu2mlx_ieee_vendor_id, sbu2mlx_product_id, sbu2mlx_product_version, sbu2mlx_caps, sbu2mlx_caps_len,
+   sbu2mlx_caps_addr, mlx2sbu_clk, mlx2sbu_reset, sbu2mlx_leds_on, sbu2mlx_leds_blink, sbu2mlx_watchdog, mlx2sbu_axi4lite_aw_rdy, mlx2sbu_axi4lite_aw_vld, mlx2sbu_axi4lite_aw_addr, mlx2sbu_axi4lite_aw_prot,
+   mlx2sbu_axi4lite_w_rdy, mlx2sbu_axi4lite_w_vld, mlx2sbu_axi4lite_w_data, mlx2sbu_axi4lite_w_strobe, mlx2sbu_axi4lite_b_rdy, mlx2sbu_axi4lite_b_vld, mlx2sbu_axi4lite_b_resp, mlx2sbu_axi4lite_ar_rdy, mlx2sbu_axi4lite_ar_vld, mlx2sbu_axi4lite_ar_addr,
+   mlx2sbu_axi4lite_ar_prot, mlx2sbu_axi4lite_r_rdy, mlx2sbu_axi4lite_r_vld, mlx2sbu_axi4lite_r_data, mlx2sbu_axi4lite_r_resp, sbu2mlx_axi4mm_aw_rdy, sbu2mlx_axi4mm_aw_vld, sbu2mlx_axi4mm_aw_addr, sbu2mlx_axi4mm_aw_burst, sbu2mlx_axi4mm_aw_cache,
+   sbu2mlx_axi4mm_aw_id, sbu2mlx_axi4mm_aw_len, sbu2mlx_axi4mm_aw_lock, sbu2mlx_axi4mm_aw_prot, sbu2mlx_axi4mm_aw_qos, sbu2mlx_axi4mm_aw_region, sbu2mlx_axi4mm_aw_size, sbu2mlx_axi4mm_w_rdy, sbu2mlx_axi4mm_w_vld, sbu2mlx_axi4mm_w_data,
+   sbu2mlx_axi4mm_w_last, sbu2mlx_axi4mm_w_strobe, sbu2mlx_axi4mm_b_rdy, sbu2mlx_axi4mm_b_vld, sbu2mlx_axi4mm_b_id, sbu2mlx_axi4mm_b_resp, sbu2mlx_axi4mm_ar_rdy, sbu2mlx_axi4mm_ar_vld, sbu2mlx_axi4mm_ar_addr, sbu2mlx_axi4mm_ar_burst,
+   sbu2mlx_axi4mm_ar_cache, sbu2mlx_axi4mm_ar_id, sbu2mlx_axi4mm_ar_len, sbu2mlx_axi4mm_ar_lock, sbu2mlx_axi4mm_ar_prot, sbu2mlx_axi4mm_ar_qos, sbu2mlx_axi4mm_ar_region, sbu2mlx_axi4mm_ar_size, sbu2mlx_axi4mm_r_rdy, sbu2mlx_axi4mm_r_vld,
+   sbu2mlx_axi4mm_r_data, sbu2mlx_axi4mm_r_id, sbu2mlx_axi4mm_r_last, sbu2mlx_axi4mm_r_resp, mlx2sbu_axi4stream_rdy, mlx2sbu_axi4stream_vld, mlx2sbu_axi4stream_tdata, mlx2sbu_axi4stream_tkeep, mlx2sbu_axi4stream_tlast, mlx2sbu_axi4stream_tuser,
+   mlx2sbu_axi4stream_tid, sbu2mlx_axi4stream_rdy, sbu2mlx_axi4stream_vld, sbu2mlx_axi4stream_tdata, sbu2mlx_axi4stream_tkeep, sbu2mlx_axi4stream_tlast, sbu2mlx_axi4stream_tuser, sbu2mlx_axi4stream_tid, nwp2sbu_axi4stream_rdy, nwp2sbu_axi4stream_vld,
+   nwp2sbu_axi4stream_tdata, nwp2sbu_axi4stream_tkeep, nwp2sbu_axi4stream_tlast, nwp2sbu_axi4stream_tuser, nwp2sbu_axi4stream_tid, sbu2nwp_axi4stream_rdy, sbu2nwp_axi4stream_vld, sbu2nwp_axi4stream_tdata, sbu2nwp_axi4stream_tkeep, sbu2nwp_axi4stream_tlast,
+   sbu2nwp_axi4stream_tuser, sbu2nwp_axi4stream_tid, cxp2sbu_axi4stream_rdy, cxp2sbu_axi4stream_vld, cxp2sbu_axi4stream_tdata, cxp2sbu_axi4stream_tkeep, cxp2sbu_axi4stream_tlast, cxp2sbu_axi4stream_tuser, cxp2sbu_axi4stream_tid, sbu2cxp_axi4stream_rdy,
+   sbu2cxp_axi4stream_vld, sbu2cxp_axi4stream_tdata, sbu2cxp_axi4stream_tkeep, sbu2cxp_axi4stream_tlast, sbu2cxp_axi4stream_tuser, sbu2cxp_axi4stream_tid, nwp2sbu_lossy_has_credits, nwp2sbu_lossless_has_credits, cxp2sbu_lossy_has_credits, cxp2sbu_lossless_has_credits);
 
-output [23:0] sbu2mlx_ieee_vendor_id;// N24
-output [15:0] sbu2mlx_product_id;// N16
-output [15:0] sbu2mlx_product_version;// N16
-output [31:0] sbu2mlx_caps;// N32
-output [15:0] sbu2mlx_caps_len;// N16
-output [23:0] sbu2mlx_caps_addr;// N24
+output [23:0] sbu2mlx_ieee_vendor_id;
+output [15:0] sbu2mlx_product_id;
+output [15:0] sbu2mlx_product_version;
+output [31:0] sbu2mlx_caps;
+output [15:0] sbu2mlx_caps_len;
+output [23:0] sbu2mlx_caps_addr;
 
 input         mlx2sbu_clk;// Working clock of 216.25MHz
 input         mlx2sbu_reset;// Synchronous reset line to the clock named 'mlx2sbu_clk', active high.
-output [7:0]  sbu2mlx_leds_on;// N8
-output [7:0]  sbu2mlx_leds_blink;// N8
+output [7:0]  sbu2mlx_leds_on;
+output [7:0]  sbu2mlx_leds_blink;
 output        sbu2mlx_watchdog;// Watchdog signal (Should be toggled with freq > 1Hz)
 
 output        mlx2sbu_axi4lite_aw_rdy;
 input         mlx2sbu_axi4lite_aw_vld;
-input [63:0]  mlx2sbu_axi4lite_aw_addr;// N64
-input [2:0]   mlx2sbu_axi4lite_aw_prot;// N3
+input [63:0]  mlx2sbu_axi4lite_aw_addr;
+input [2:0]   mlx2sbu_axi4lite_aw_prot;
 
 output        mlx2sbu_axi4lite_w_rdy;
 input         mlx2sbu_axi4lite_w_vld;
-input [31:0]  mlx2sbu_axi4lite_w_data;// N32
-input [3:0]   mlx2sbu_axi4lite_w_strobe;// N4
+input [31:0]  mlx2sbu_axi4lite_w_data;
+input [3:0]   mlx2sbu_axi4lite_w_strobe;
 
 input         mlx2sbu_axi4lite_b_rdy;
 output        mlx2sbu_axi4lite_b_vld;
-output [1:0]  mlx2sbu_axi4lite_b_resp;// N2
+output [1:0]  mlx2sbu_axi4lite_b_resp;
 
 output        mlx2sbu_axi4lite_ar_rdy;
 input         mlx2sbu_axi4lite_ar_vld;
-input [63:0]  mlx2sbu_axi4lite_ar_addr;// N64
-input [2:0]   mlx2sbu_axi4lite_ar_prot;// N3
+input [63:0]  mlx2sbu_axi4lite_ar_addr;
+input [2:0]   mlx2sbu_axi4lite_ar_prot;
 
 input         mlx2sbu_axi4lite_r_rdy;
 output        mlx2sbu_axi4lite_r_vld;
-output [31:0] mlx2sbu_axi4lite_r_data;// N32
-output [1:0]  mlx2sbu_axi4lite_r_resp;// N2
+output [31:0] mlx2sbu_axi4lite_r_data;
+output [1:0]  mlx2sbu_axi4lite_r_resp;
 
 input         sbu2mlx_axi4mm_aw_rdy;
 output        sbu2mlx_axi4mm_aw_vld;
-output [63:0] sbu2mlx_axi4mm_aw_addr;// N64
-output [1:0]  sbu2mlx_axi4mm_aw_burst;// N2
-output [3:0]  sbu2mlx_axi4mm_aw_cache;// N4
-output [2:0]  sbu2mlx_axi4mm_aw_id;// N3
-output [7:0]  sbu2mlx_axi4mm_aw_len;// N8
-output        sbu2mlx_axi4mm_aw_lock;// N1
-output [2:0]  sbu2mlx_axi4mm_aw_prot;// N3
-output [3:0]  sbu2mlx_axi4mm_aw_qos;// N4
-output [3:0]  sbu2mlx_axi4mm_aw_region;// N4
-output [2:0]  sbu2mlx_axi4mm_aw_size;// N3
+output [63:0] sbu2mlx_axi4mm_aw_addr;
+output [1:0]  sbu2mlx_axi4mm_aw_burst;
+output [3:0]  sbu2mlx_axi4mm_aw_cache;
+output [2:0]  sbu2mlx_axi4mm_aw_id;
+output [7:0]  sbu2mlx_axi4mm_aw_len;
+output        sbu2mlx_axi4mm_aw_lock;
+output [2:0]  sbu2mlx_axi4mm_aw_prot;
+output [3:0]  sbu2mlx_axi4mm_aw_qos;
+output [3:0]  sbu2mlx_axi4mm_aw_region;
+output [2:0]  sbu2mlx_axi4mm_aw_size;
 
 input         sbu2mlx_axi4mm_w_rdy;
 output        sbu2mlx_axi4mm_w_vld;
-output [511:0] sbu2mlx_axi4mm_w_data;// N512
+output [511:0] sbu2mlx_axi4mm_w_data;
 output         sbu2mlx_axi4mm_w_last;
-output [63:0]  sbu2mlx_axi4mm_w_strobe;// N64
+output [63:0]  sbu2mlx_axi4mm_w_strobe;
 
 output         sbu2mlx_axi4mm_b_rdy;
 input          sbu2mlx_axi4mm_b_vld;
-input [2:0]    sbu2mlx_axi4mm_b_id;// N3
-input [1:0]    sbu2mlx_axi4mm_b_resp;// N2
+input [2:0]    sbu2mlx_axi4mm_b_id;
+input [1:0]    sbu2mlx_axi4mm_b_resp;
 
 input          sbu2mlx_axi4mm_ar_rdy;
 output         sbu2mlx_axi4mm_ar_vld;
-output [63:0]  sbu2mlx_axi4mm_ar_addr;// N64
-output [1:0]   sbu2mlx_axi4mm_ar_burst;// N2
-output [3:0]   sbu2mlx_axi4mm_ar_cache;// N4
-output [2:0]   sbu2mlx_axi4mm_ar_id;// N3
-output [7:0]   sbu2mlx_axi4mm_ar_len;// N8
-output         sbu2mlx_axi4mm_ar_lock;// N1
-output [2:0]   sbu2mlx_axi4mm_ar_prot;// N3
-output [3:0]   sbu2mlx_axi4mm_ar_qos;// N4
-output [3:0]   sbu2mlx_axi4mm_ar_region;// N4
-output [2:0]   sbu2mlx_axi4mm_ar_size;// N3
+output [63:0]  sbu2mlx_axi4mm_ar_addr;
+output [1:0]   sbu2mlx_axi4mm_ar_burst;
+output [3:0]   sbu2mlx_axi4mm_ar_cache;
+output [2:0]   sbu2mlx_axi4mm_ar_id;
+output [7:0]   sbu2mlx_axi4mm_ar_len;
+output         sbu2mlx_axi4mm_ar_lock;
+output [2:0]   sbu2mlx_axi4mm_ar_prot;
+output [3:0]   sbu2mlx_axi4mm_ar_qos;
+output [3:0]   sbu2mlx_axi4mm_ar_region;
+output [2:0]   sbu2mlx_axi4mm_ar_size;
 
 output         sbu2mlx_axi4mm_r_rdy;
 input          sbu2mlx_axi4mm_r_vld;
-input [511:0]  sbu2mlx_axi4mm_r_data;// N512
-input [2:0]    sbu2mlx_axi4mm_r_id;// N3
+input [511:0]  sbu2mlx_axi4mm_r_data;
+input [2:0]    sbu2mlx_axi4mm_r_id;
 input          sbu2mlx_axi4mm_r_last;
-input [1:0]    sbu2mlx_axi4mm_r_resp;// N2
+input [1:0]    sbu2mlx_axi4mm_r_resp;
 
 output         mlx2sbu_axi4stream_rdy;
 input          mlx2sbu_axi4stream_vld;
-input [255:0]  mlx2sbu_axi4stream_tdata;// N256
-input [31:0]   mlx2sbu_axi4stream_tkeep;// N32
-input [0:0]    mlx2sbu_axi4stream_tlast;// N1
-input [11:0]   mlx2sbu_axi4stream_tuser;// N12
-input [2:0]    mlx2sbu_axi4stream_tid;// N3
+input [255:0]  mlx2sbu_axi4stream_tdata;
+input [31:0]   mlx2sbu_axi4stream_tkeep;
+input          mlx2sbu_axi4stream_tlast;
+input [11:0]   mlx2sbu_axi4stream_tuser;
+input [2:0]    mlx2sbu_axi4stream_tid;
 
 input          sbu2mlx_axi4stream_rdy;
 output         sbu2mlx_axi4stream_vld;
-output [255:0] sbu2mlx_axi4stream_tdata;// N256
-output [31:0]  sbu2mlx_axi4stream_tkeep;// N32
-output [0:0]   sbu2mlx_axi4stream_tlast;// N1
-output [11:0]  sbu2mlx_axi4stream_tuser;// N12
-output [2:0]   sbu2mlx_axi4stream_tid;// N3
+output [255:0] sbu2mlx_axi4stream_tdata;
+output [31:0]  sbu2mlx_axi4stream_tkeep;
+output         sbu2mlx_axi4stream_tlast;
+output [11:0]  sbu2mlx_axi4stream_tuser;
+output [2:0]   sbu2mlx_axi4stream_tid;
 
 output         nwp2sbu_axi4stream_rdy;
 input          nwp2sbu_axi4stream_vld;
-input [255:0]  nwp2sbu_axi4stream_tdata;// N256
-input [31:0]   nwp2sbu_axi4stream_tkeep;// N32
-input [0:0]    nwp2sbu_axi4stream_tlast;// N1
-input [11:0]   nwp2sbu_axi4stream_tuser;// N12
-input [2:0]    nwp2sbu_axi4stream_tid;// N3
+input [255:0]  nwp2sbu_axi4stream_tdata;
+input [31:0]   nwp2sbu_axi4stream_tkeep;
+input [0:0]    nwp2sbu_axi4stream_tlast;
+input [11:0]   nwp2sbu_axi4stream_tuser;
+input [2:0]    nwp2sbu_axi4stream_tid;
 
 input          sbu2nwp_axi4stream_rdy;
 output         sbu2nwp_axi4stream_vld;
-output [255:0] sbu2nwp_axi4stream_tdata;// N256
-output [31:0]  sbu2nwp_axi4stream_tkeep;// N32
-output [0:0]   sbu2nwp_axi4stream_tlast;// N1
-output [11:0]  sbu2nwp_axi4stream_tuser;// N12
-output [2:0]   sbu2nwp_axi4stream_tid;// N3
+output [255:0] sbu2nwp_axi4stream_tdata;
+output [31:0]  sbu2nwp_axi4stream_tkeep;
+output         sbu2nwp_axi4stream_tlast;
+output [11:0]  sbu2nwp_axi4stream_tuser;
+output [2:0]   sbu2nwp_axi4stream_tid;
 
 output         cxp2sbu_axi4stream_rdy;
 input          cxp2sbu_axi4stream_vld;
-input [255:0]  cxp2sbu_axi4stream_tdata;// N256
-input [31:0]   cxp2sbu_axi4stream_tkeep;// N32
-input [0:0]    cxp2sbu_axi4stream_tlast;// N1
-input [11:0]   cxp2sbu_axi4stream_tuser;// N12
-input [2:0]    cxp2sbu_axi4stream_tid;// N3
+input [255:0]  cxp2sbu_axi4stream_tdata;
+input [31:0]   cxp2sbu_axi4stream_tkeep;
+input          cxp2sbu_axi4stream_tlast;
+input [11:0]   cxp2sbu_axi4stream_tuser;
+input [2:0]    cxp2sbu_axi4stream_tid;
 
 input          sbu2cxp_axi4stream_rdy;
 output         sbu2cxp_axi4stream_vld;
-output [255:0] sbu2cxp_axi4stream_tdata;// N256
-output [31:0]  sbu2cxp_axi4stream_tkeep;// N32
-output [0:0]   sbu2cxp_axi4stream_tlast;// N1
-output [11:0]  sbu2cxp_axi4stream_tuser;// N12
-output [2:0]   sbu2cxp_axi4stream_tid;// N3
+output [255:0] sbu2cxp_axi4stream_tdata;
+output [31:0]  sbu2cxp_axi4stream_tkeep;
+output         sbu2cxp_axi4stream_tlast;
+output [11:0]  sbu2cxp_axi4stream_tuser;
+output [2:0]   sbu2cxp_axi4stream_tid;
 
 input          nwp2sbu_lossy_has_credits;
 input          nwp2sbu_lossless_has_credits;
@@ -179,23 +179,21 @@ input          cxp2sbu_lossless_has_credits;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-// mvlint ignore: 11
+  reg [23:0]   sbu2mlx_ieee_vendor_id_r;
 
-// ID
-//assign         sbu2mlx_ieee_vendor_id = 24'h0002c9;// Mellanox
+// VERSION // ID
+//assign         sbu2mlx_ieee_vendor_id  = 24'h0002c9;          // Mellanox OUI
 // Assigning a TCE specific ID, at AXI-lite address 0x900020
 // Useful to verify that NICA bit file has been properly loaded into the FPGA
-  assign         sbu2mlx_ieee_vendor_id  = sbu2mlx_ieee_vendor_id_r;        // Technion, TCE. read at address 0x900020
-  assign         sbu2mlx_product_id      = 16'd4;                           // @address 0x900024
-  assign         sbu2mlx_product_version = `BUILD_NUMBER;                   // @address 0x900024
-  assign         sbu2mlx_caps            = 32'd0;                           // @address 0x900028
-  assign         sbu2mlx_caps_len        = 16'd0;                           // @address 0x90002c
-  assign         sbu2mlx_caps_addr       = 24'd0;                           // @address 0x900034
+assign         sbu2mlx_ieee_vendor_id  = sbu2mlx_ieee_vendor_id_r;        // Technion, TCE. read at address 0x900020
+assign         sbu2mlx_product_id      = 16'd4;                           // @address 0x900024
+assign         sbu2mlx_product_version = `BUILD_NUMBER;                   // @address 0x900024
+assign         sbu2mlx_caps            = 32'd0;                           // @address 0x900028
+assign         sbu2mlx_caps_len        = 16'd0;                           // @address 0x90002c
+assign         sbu2mlx_caps_addr       = 24'd0;                           // @address 0x900034
 
-  wire 	       sbu2mlx_axi4mm_aw_user;
-  wire 	       temp1;
-  wire 	       temp2;
-  
+wire           temp1;
+wire           temp2;
  
 // AXIlite crossbar: single master ==> multiple slaves
 // Local signals for AXIlite outputs
@@ -350,8 +348,6 @@ input          cxp2sbu_lossless_has_credits;
   reg [31:0]   axilite_read_timeout_counter;
   reg [31:0]   axilite_write_timeout_counter;
 
-  reg [23:0]   sbu2mlx_ieee_vendor_id_r;
-
 // sbu to cxp data fifo
   wire [255:0] sbu2cxpfifo_axi4stream_tdata;  
   wire         sbu2cxpfifo_axi4stream_vld;
@@ -360,9 +356,6 @@ input          cxp2sbu_lossless_has_credits;
   wire         sbu2cxpfifo_axi4stream_tlast;
   wire [2:0]   sbu2cxpfifo_axi4stream_tid;
   wire [11:0]  sbu2cxpfifo_axi4stream_tuser;
-  wire [31:0]  sbu2cxpfifo_data_count;
-  wire [31:0]  sbu2cxpfifo_wr_data_count;
-  wire [31:0]  sbu2cxpfifo_rd_data_count;
 
   
 // sbu to nwp data fifo
@@ -373,9 +366,6 @@ input          cxp2sbu_lossless_has_credits;
   wire         sbu2nwpfifo_axi4stream_tlast;
   wire [2:0]   sbu2nwpfifo_axi4stream_tid;
   wire [11:0]  sbu2nwpfifo_axi4stream_tuser;
-  wire [31:0]  sbu2nwpfifo_data_count;
-  wire [31:0]  sbu2nwpfifo_wr_data_count;
-  wire [31:0]  sbu2nwpfifo_rd_data_count;
 
 // {cxp,nwp} fifo to credit mask
   wire sbu2nwp_m_axis_tvalid;
@@ -914,25 +904,25 @@ endgenerate
     .ik_net_data_input_V_V_TREADY(ik0_net_data_input_V_V_TREADY),
 
 //DRAM interface:
-    .ik_mem_aw_V_V_TVALID(ik2map_axi4mm_aw_vld),
-    .ik_mem_aw_V_V_TREADY(ik2map_axi4mm_aw_rdy),
-    .ik_mem_aw_V_V_TDATA(ik2map_axi4mm_aw_addr[45:6]),
+    .ik_mem_aw_stream_V_V_TVALID(ik2map_axi4mm_aw_vld),
+    .ik_mem_aw_stream_V_V_TREADY(ik2map_axi4mm_aw_rdy),
+    .ik_mem_aw_stream_V_V_TDATA(ik2map_axi4mm_aw_addr[45:6]),
 
-    .ik_mem_w_V_V_TVALID(sbu2mlx_axi4mm_w_vld),
-    .ik_mem_w_V_V_TREADY(sbu2mlx_axi4mm_w_rdy),
-    .ik_mem_w_V_V_TDATA(sbu2mlx_axi4mm_w_data),
+    .ik_mem_w_stream_V_V_TVALID(sbu2mlx_axi4mm_w_vld),
+    .ik_mem_w_stream_V_V_TREADY(sbu2mlx_axi4mm_w_rdy),
+    .ik_mem_w_stream_V_V_TDATA(sbu2mlx_axi4mm_w_data),
 
-    .ik_mem_b_V_TREADY(sbu2mlx_axi4mm_b_rdy),
-    .ik_mem_b_V_TVALID(sbu2mlx_axi4mm_b_vld),
-    .ik_mem_b_V_TDATA({7'b0, ~|sbu2mlx_axi4mm_b_resp}),
+    .ik_mem_b_stream_V_TREADY(sbu2mlx_axi4mm_b_rdy),
+    .ik_mem_b_stream_V_TVALID(sbu2mlx_axi4mm_b_vld),
+    .ik_mem_b_stream_V_TDATA({7'b0, ~|sbu2mlx_axi4mm_b_resp}),
 
-    .ik_mem_ar_V_V_TVALID(ik2map_axi4mm_ar_vld),
-    .ik_mem_ar_V_V_TREADY(ik2map_axi4mm_ar_rdy),
-    .ik_mem_ar_V_V_TDATA(ik2map_axi4mm_ar_addr[45:6]),
+    .ik_mem_ar_stream_V_V_TVALID(ik2map_axi4mm_ar_vld),
+    .ik_mem_ar_stream_V_V_TREADY(ik2map_axi4mm_ar_rdy),
+    .ik_mem_ar_stream_V_V_TDATA(ik2map_axi4mm_ar_addr[45:6]),
 
-    .ik_mem_r_V_V_TVALID(sbu2mlx_axi4mm_r_vld),
-    .ik_mem_r_V_V_TREADY(sbu2mlx_axi4mm_r_rdy),
-    .ik_mem_r_V_V_TDATA(sbu2mlx_axi4mm_r_data),
+    .ik_mem_r_stream_V_V_TVALID(sbu2mlx_axi4mm_r_vld),
+    .ik_mem_r_stream_V_V_TREADY(sbu2mlx_axi4mm_r_rdy),
+    .ik_mem_r_stream_V_V_TDATA(sbu2mlx_axi4mm_r_data),
 
         .ik_events_0_V(ikernel_event0),
         .ik_events_1_V(ikernel_event1),
@@ -1020,22 +1010,6 @@ assign sbu2mlx_axi4mm_w_last = 1'b1;
 `endif
 
 // end of ikernel axilite signals  
-
-
-   /* TODO move to a module */
-   reg [0:20] watchdog_counter;
-   always @(posedge mlx2sbu_clk)
-   if (mlx2sbu_reset) begin
-     watchdog_counter <= 21'b0;
-   end else begin
-        watchdog_counter <= watchdog_counter + 1;
-   end
-   assign sbu2mlx_watchdog = watchdog_counter[0];
-
-   assign sbu2mlx_leds_on =8'd23;
-   assign sbu2mlx_leds_blink = 8'd0;
-
-
 
 // while ik2 axilite port is not used...
   assign ik2_AXILiteS_AWREADY = 1'b0;
@@ -1318,7 +1292,6 @@ assign sbu2mlx_axi4mm_w_last = 1'b1;
     end
   end
 
-
   // 64 deep store & forward fifos.
   // For more fifo details, see <netperf-verilog_workarea>/sources/xci/axis_data_fifo_0/axis_data_fifo_0.xci
   axis_data_fifo_0 sbu2cxp_data_fifo (
@@ -1337,10 +1310,7 @@ assign sbu2mlx_axi4mm_w_last = 1'b1;
   .m_axis_tkeep(sbu2cxp_axi4stream_tkeep),  // output wire [31 : 0] m_axis_tkeep
   .m_axis_tlast(sbu2cxp_axi4stream_tlast),  // output wire m_axis_tlast
   .m_axis_tid(sbu2cxp_axi4stream_tid),      // output wire [2 : 0] m_axis_tid
-  .m_axis_tuser(sbu2cxp_axi4stream_tuser),  // output wire [11 : 0] m_axis_tuser
-  .axis_data_count(sbu2cxpfifo_data_count),        // output wire [31 : 0] axis_data_count
-  .axis_wr_data_count(sbu2cxpfifo_wr_data_count),  // output wire [31 : 0] axis_wr_data_count
-  .axis_rd_data_count(sbu2cxpfifo_rd_data_count)   // output wire [31 : 0] axis_rd_data_count
+  .m_axis_tuser(sbu2cxp_axi4stream_tuser)   // output wire [11 : 0] m_axis_tuser
 );
 
   axis_data_fifo_0 sbu2nwp_data_fifo (
@@ -1359,10 +1329,7 @@ assign sbu2mlx_axi4mm_w_last = 1'b1;
   .m_axis_tkeep(sbu2nwp_axi4stream_tkeep),  // output wire [31 : 0] m_axis_tkeep
   .m_axis_tlast(sbu2nwp_axi4stream_tlast),  // output wire m_axis_tlast
   .m_axis_tid(sbu2nwp_axi4stream_tid),      // output wire [2 : 0] m_axis_tid
-  .m_axis_tuser(sbu2nwp_axi4stream_tuser),  // output wire [11 : 0] m_axis_tuser
-  .axis_data_count(sbu2nwpfifo_data_count),        // output wire [31 : 0] axis_data_count
-  .axis_wr_data_count(sbu2nwpfifo_wr_data_count),  // output wire [31 : 0] axis_wr_data_count
-  .axis_rd_data_count(sbu2nwpfifo_rd_data_count)   // output wire [31 : 0] axis_rd_data_count
+  .m_axis_tuser(sbu2nwp_axi4stream_tuser)   // output wire [11 : 0] m_axis_tuser
 );
 
 // Mark packets end at each axi-stream interface
@@ -1664,6 +1631,12 @@ sigmon_top #(
     .ik2map_axi4mm_ar_vld_in(ik2map_axi4mm_ar_vld),
     .axi4mm_ar_rdy_in(sbu2mlx_axi4mm_ar_rdy),
     .axi4mm_ar_vld_in(sbu2mlx_axi4mm_ar_vld),
+
+    .ik2map_axi4mm_aw_addr_in(ik2map_axi4mm_aw_addr),
+    .ik2map_axi4mm_ar_addr_in(ik2map_axi4mm_ar_addr),
+    .sbu2mlx_axi4mm_aw_addr_in(sbu2mlx_axi4mm_aw_addr_low),
+    .sbu2mlx_axi4mm_ar_addr_in(sbu2mlx_axi4mm_ar_addr_low),
+	  
     .axi4mm_r_rdy_in(sbu2mlx_axi4mm_r_rdy),
     .axi4mm_r_vld_in(sbu2mlx_axi4mm_r_vld),
     .axi4mm_r_last_in(sbu2mlx_axi4mm_r_last),
@@ -1796,5 +1769,28 @@ ddr_address_mapping  #(
 .map2ddr_region(sbu2mlx_axi4mm_ar_region),
 .map2ddr_size(sbu2mlx_axi4mm_ar_size)
 );
+
+exp_hls_watchdog exp_hls_watchdog(
+   .clk(mlx2sbu_clk),
+   .reset(mlx2sbu_reset),
+   .watchdog_counter(sbu2mlx_watchdog)
+);
+
+assign         sbu2mlx_axi4mm_aw_id = 3'd0;
+assign         sbu2mlx_axi4mm_ar_id = 3'd0;
+assign         sbu2mlx_axi4mm_aw_lock = 1'b0;
+assign         sbu2mlx_leds_on =8'd23;
+assign         sbu2mlx_leds_blink = 8'd0;
+
+wire           unconnected_sbu2mlx_axi4mm           =
+                                                      sbu2mlx_axi4mm_w_rdy |
+                                                      sbu2mlx_axi4mm_aw_rdy |
+                                                      sbu2mlx_axi4mm_r_vld |
+                                                      sbu2mlx_axi4mm_r_last
+                                                      ;
+
+wire           unconnect_axi = |{sbu2mlx_axi4mm_r_resp,sbu2mlx_axi4mm_b_id,sbu2mlx_axi4mm_r_id};
+
+wire           unconnected_axi_lite = |{mlx2sbu_axi4lite_aw_prot, mlx2sbu_axi4lite_ar_prot};
 
 endmodule

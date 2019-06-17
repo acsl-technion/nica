@@ -27,6 +27,9 @@
 #include "hls_helper.h"
 #include <tuple>
 
+#include <ntl/produce.hpp>
+#include <ntl/consume.hpp>
+
 using namespace hls_helpers;
 using hls_ik::ikernel_id_t;
 
@@ -91,7 +94,7 @@ void echo::echo_pipeline(hls_ik::ports& p, hls_ik::tc_ikernel_data_counts& tc) {
 
 void echo::step(hls_ik::ports& p, hls_ik::tc_ikernel_data_counts& tc) {
 #pragma HLS inline
-    memory_unused(p.mem, dummy_update);
+    memory_unused.step(p.mem);
     echo_pipeline(p, tc);
 
     ikernel::update();
@@ -104,10 +107,10 @@ void echo::step(hls_ik::ports& p, hls_ik::tc_ikernel_data_counts& tc) {
         port_dummy_update.write_nb(false);
         port_dummy_update.read_nb(dummy);
 
-        consume(p.host.metadata_input, dummy);
-        consume(p.host.data_input, dummy);
-        produce(p.net.metadata_output, dummy);
-        produce(p.net.data_output, dummy);
+        ntl::consume(p.host.metadata_input, dummy);
+        ntl::consume(p.host.data_input, dummy);
+        ntl::produce(p.net.metadata_output, dummy);
+        ntl::produce(p.net.data_output, dummy);
     }
 }
 

@@ -33,6 +33,7 @@ proc create_project {name top dir files tb_files} {
     set uuid_ldflags [exec pkg-config --libs uuid]
     set cflags "-std=gnu++0x $uuid_cflags \
                 -I$nica_basedir/hls \
+                -I$nica_basedir/../ntl \
                 -I$nica_basedir/../ikernels/hls \
                 -I$nica_basedir/../ikernels/hls/tests \
                 -I$gtest_root/include \
@@ -54,7 +55,7 @@ proc create_project {name top dir files tb_files} {
         set cflags "$cflags -DMEMCACHED_VALUE_SIZE=$memcached_value_size"
     }
 
-    set ldflags "-lpcap $uuid_ldflags -L$gtest_root -lgtest -L$nica_basedir/../build/nica/ -lnica-csim"
+    set ldflags "-lpcap -lssl -lcrypto $uuid_ldflags -L$gtest_root -lgtest -L$nica_basedir/../build/nica/ -lnica-csim"
 
     foreach f $files {
         set f [file join $dir $f]
@@ -70,12 +71,17 @@ proc create_project {name top dir files tb_files} {
 
     open_solution "40Gbps"
     set_part {xcku060-ffva1156-2-i}
-    create_clock -period "216.25MHz"
+    create_clock -period "5.185ns"
     config_rtl -prefix ${name}_
+    config_rtl -disable_start_propagation
     config_interface -m_axi_addr64
-    if {[llength $tb_files] > 0} {
-        csim_design -ldflags $ldflags
+    if {[string match "*2018.2" $::ap_root]} {
+        # Our pattern of using a class to hold state breaks dataflow strict mode
+        config_dataflow -strict_mode off
     }
+    #if {[llength $tb_files] > 0} {
+    #    csim_design -ldflags $ldflags
+    #}
     csynth_design
     if {$simulation_build && [llength $tb_files] > 0} {
         cosim_design -O -ldflags $ldflags -trace_level none

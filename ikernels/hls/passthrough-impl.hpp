@@ -27,9 +27,8 @@
 #define PASSTHROUGH_IMPL_HPP
 
 #include <ikernel.hpp>
-#include <gateway.hpp>
 #include <flow_table.hpp>
-#include <context_manager.hpp>
+#include <ntl/context_manager.hpp>
 #include <drop_or_pass.hpp>
 
 #define LOG_NUM_PASSTHROUGH_CONTEXTS 6
@@ -46,18 +45,18 @@ struct passthrough_context {
     bool ignore_credits;
 };
 
-class passthrough_contexts : public context_manager<passthrough_context, LOG_NUM_PASSTHROUGH_CONTEXTS>
+class passthrough_contexts : public ntl::context_manager<passthrough_context, LOG_NUM_PASSTHROUGH_CONTEXTS>
 {
 public:
     int rpc(int address, int *value, hls_ik::ikernel_id_t ikernel_id, bool read);
 };
 
-class passthrough : public hls_ik::ikernel, public hls_ik::virt_gateway_impl<passthrough>
+class passthrough : public hls_ik::ikernel 
 {
 public:
-    virtual int reg_write(int address, int value, hls_ik::ikernel_id_t ikernel_id);
-    virtual int reg_read(int address, int* value, hls_ik::ikernel_id_t ikernel_id);
-    virtual void step(hls_ik::ports& p, hls_ik::tc_ikernel_data_counts& tc);
+    int reg_write(int address, int value, hls_ik::ikernel_id_t ikernel_id);
+    int reg_read(int address, int* value, hls_ik::ikernel_id_t ikernel_id);
+    void step(hls_ik::ports& p, hls_ik::tc_ikernel_data_counts& tc);
 protected:
     enum { DECISION, STREAM } _state;
 

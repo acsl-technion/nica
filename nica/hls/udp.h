@@ -39,7 +39,7 @@
 #include <mlx.h>
 #include <hls_helper.h>
 #include <link_with_reg.hpp>
-#include <push_header.hpp>
+#include <ntl/push_header.hpp>
 #include <ikernel.hpp>
 
 #include "flow_table_impl.hpp"
@@ -249,13 +249,14 @@ namespace udp {
     {
     public:
         header_data_split();
-        void split(mlx::stream& in, header_stream& header, hls_ik::data_stream& data);
+        void step(mlx::stream& in, header_stream& header, hls_ik::data_stream& data);
+        void split(header_stream& header, hls_ik::data_stream& data);
 
     private:
         enum { IDLE, READING_HEADER, STREAM, LAST } state;
+        mlx::metadata meta;
         ap_uint<MLX_AXI4_WIDTH_BITS> buffer;
-        mlx::pkt_id_t pkt_id;
-        mlx::user_t user;
+        mlx::extract_metadata extract_metadata;
     };
 
     /* Distinguish between UDP packets and non-UDP, and for UDP packets, splits
@@ -454,7 +455,7 @@ namespace udp {
         hls_ik::data_stream data_hdr_to_reorder, data_reorder_to_join;
         bool_stream empty_packet, enable_stream;
         header_to_mlx hdr2mlx;
-        push_header<header_parser::width> merger;
+        ntl::push_header<header_parser::width> merger;
         mlx::join_packet_metadata join_pkt_metadata;
         link_with_reg<mlx::axi4s, false> link;
     };

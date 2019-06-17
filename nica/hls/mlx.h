@@ -27,7 +27,8 @@
 
 #include <tuple>
 #include <ap_int.h>
-#include <hls_stream.h>
+#include <ntl/stream.hpp>
+#include <ntl/enumerate.hpp>
 #include "hls_helper.h"
 #include "axi_data.hpp"
 
@@ -82,11 +83,6 @@ namespace mlx {
 
 #define MLX_TUSER_PRESERVE (~(mlx::USER_DROP | mlx::USER_LOSSY))
 
-    static inline ap_uint<MLX_AXI4_WIDTH_BYTES> last_word_keep_num_bytes_padding(ap_uint<5> padding)
-	{
-    	return 0xffffffff ^ ((1 << padding) - 1);
-	}
-
     /* 0 means all are valid */
     static inline ap_uint<MLX_AXI4_WIDTH_BYTES> last_word_keep_num_bytes_valid(ap_uint<5> num_valid)
 	{
@@ -94,18 +90,6 @@ namespace mlx {
 		/* Reverse the bits */
 		return num_valid ? tmp(0, MLX_AXI4_WIDTH_BYTES - 1) : 0xffffffff;
 	}
-
-    static inline axi4s last_word(ap_uint<MLX_AXI4_WIDTH_BITS> data, ap_uint<5> padding)
-    {
-        axi4s word;
-        word.data = data;
-        word.keep = last_word_keep_num_bytes_padding(padding);
-        word.last = 1;
-        word.user = 0;
-        word.id = 0;
-
-        return word;
-    }
 
     typedef hls::stream<axi4s> stream;
 
@@ -160,8 +144,10 @@ namespace mlx {
 
     typedef hls::stream<metadata> metadata_stream;
 
-    std::tuple<metadata, hls_ik::axi_data> split_metadata(const axi4s& in);
-    axi4s join_metadata(const std::tuple<metadata, hls_ik::axi_data>& in);
+    typedef std::tuple<metadata, hls_ik::axi_data> metadata_and_data;
+
+    metadata_and_data split_metadata(const axi4s& in);
+    axi4s join_metadata(const metadata_and_data& in);
 
     class join_packet_metadata
     {
@@ -172,6 +158,19 @@ namespace mlx {
     private:
         enum { IDLE, STREAM } state;
         metadata m;
+    };
+
+    class extract_metadata
+    {
+    public:
+        ntl::stream<metadata> out_metadata;
+        ntl::stream<ntl::axi_data> out_data;
+
+        void step(stream& in);
+
+    private:
+        ntl::stream<axi4s> _enum_in;
+        ntl::enum_first<axi4s> _enum;
     };
 }
 

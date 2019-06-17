@@ -176,10 +176,10 @@ void nica_state<pipeline>::nica_step(
     DO_PRAGMA(HLS STREAM variable=over_threshold depth=FIFO_PACKETS);
     DO_PRAGMA(HLS STREAM variable=bool_pass_from_steering depth=FIFO_PACKETS);
 #define BOOST_PP_LOCAL_MACRO(i) \
-    DO_PRAGMA_SYN(HLS data_pack variable=data_udp_to_ikernel ## i); \
-    DO_PRAGMA_SYN(HLS data_pack variable=header_udp_to_ikernel ## i); \
-    DO_PRAGMA(HLS STREAM variable=header_udp_to_ikernel ## i depth=FIFO_PACKETS); \
-    DO_PRAGMA(HLS STREAM variable=ft_results_to_ik ## i depth=FIFO_PACKETS);
+    DO_PRAGMA_SYN(HLS data_pack variable=&data_udp_to_ikernel ## i); \
+    DO_PRAGMA_SYN(HLS data_pack variable=&header_udp_to_ikernel ## i); \
+    DO_PRAGMA(HLS stream variable=&header_udp_to_ikernel ## i depth=FIFO_PACKETS); \
+    DO_PRAGMA(HLS stream variable=&ft_results_to_ik ## i depth=FIFO_PACKETS);
 #define BOOST_PP_LOCAL_LIMITS (0, NUM_IKERNELS - 1)
 %:include BOOST_PP_LOCAL_ITERATE()
 
@@ -353,10 +353,10 @@ void nica(mlx::stream& prt_nw2sbu, mlx::stream& sbu2prt_nw, mlx::stream& prt_cx2
         static hls_ik::ports ik_buf ## n; \
         static link_ports linker ## n; \
         \
-        DO_PRAGMA(HLS STREAM variable=ik_buf ## n.host.metadata_input depth=FIFO_WORDS); \
-        DO_PRAGMA(HLS STREAM variable=ik_buf ## n.host.data_input depth=FIFO_WORDS); \
-        DO_PRAGMA(HLS STREAM variable=ik_buf ## n.net.metadata_input depth=FIFO_WORDS); \
-        DO_PRAGMA(HLS STREAM variable=ik_buf ## n.net.data_input depth=FIFO_WORDS);
+        DO_PRAGMA(HLS stream variable=&ik_buf ## n.host.metadata_input depth=FIFO_WORDS); \
+        DO_PRAGMA(HLS stream variable=&ik_buf ## n.host.data_input depth=FIFO_WORDS); \
+        DO_PRAGMA(HLS stream variable=&ik_buf ## n.net.metadata_input depth=FIFO_WORDS); \
+        DO_PRAGMA(HLS stream variable=&ik_buf ## n.net.data_input depth=FIFO_WORDS);
 #define BOOST_PP_LOCAL_LIMITS (0, NUM_IKERNELS - 1)
 %:include BOOST_PP_LOCAL_ITERATE()
 

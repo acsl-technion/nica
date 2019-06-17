@@ -28,7 +28,7 @@
 #include <ikernel.hpp>
 #include <gateway.hpp>
 #include <flow_table.hpp>
-#include <context_manager.hpp>
+#include <ntl/context_manager.hpp>
 #include <drop_or_pass.hpp>
 
 #include "threshold.hpp"
@@ -52,7 +52,7 @@ struct threshold_context {
     hls_ik::ring_id_t ring_id;
 };
 
-class threshold_contexts : public context_manager<threshold_context, LOG_NUM_THRESHOLD_CONTEXTS>
+class threshold_contexts : public ntl::context_manager<threshold_context, LOG_NUM_THRESHOLD_CONTEXTS>
 {
 public:
     int rpc(int address, int *value, hls_ik::ikernel_id_t ikernel_id, bool read);
@@ -60,11 +60,11 @@ public:
     hls_ik::ring_id_t find_ring(const hls_ik::ikernel_id_t& ikernel_id);
 };
 
-class threshold : public hls_ik::ikernel, public hls_ik::virt_gateway_impl<threshold> {
+class threshold : public hls_ik::ikernel {
 public:
-    virtual void step(hls_ik::ports& ports, hls_ik::tc_ikernel_data_counts& tc);
-    virtual int reg_write(int address, int value, hls_ik::ikernel_id_t ikernel_id);
-    virtual int reg_read(int address, int* value, hls_ik::ikernel_id_t ikernel_id);
+    void step(hls_ik::ports& ports, hls_ik::tc_ikernel_data_counts& tc);
+    int reg_write(int address, int value, hls_ik::ikernel_id_t ikernel_id);
+    int reg_read(int address, int* value, hls_ik::ikernel_id_t ikernel_id);
     void update_stats(hls_ik::ikernel_id_t id, value v, bool drop, bool backpressure);
 
 protected:

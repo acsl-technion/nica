@@ -26,7 +26,7 @@
 #ifndef MEMCACHEDCACHE_HPP
 #define MEMCACHEDCACHE_HPP
 
-#include "maybe.hpp"
+#include <ntl/maybe.hpp>
 #include <boost/functional/hash.hpp>
 
 template <unsigned Size, unsigned Bits>
@@ -162,14 +162,14 @@ public:
         return !outstanding_reads.empty() && m.has_read_response();
     }
 
-    maybe<memcached_value<ValueSize> > get_find_result(memory& m)
+    ntl::maybe<memcached_value<ValueSize> > get_find_result(memory& m)
     {
 #pragma HLS inline
         entry_t ent = m.get_read_response();
         memcached_key<KeySize> k;
         outstanding_reads.read_nb(k);
 
-        return maybe<memcached_value<ValueSize> >(ent.valid && ent.key == k, ent.value);
+        return ntl::maybe<memcached_value<ValueSize> >(ent.valid && ent.key == k, ent.value);
     }
 
 private:
@@ -181,7 +181,7 @@ private:
     }
 
     index_t h_a(const memcached_key<KeySize>& tag) const {
-#pragma HLS pipeline enable_flush ii=4
+#pragma HLS pipeline enable_flush ii=3
 	    index_t seed = 5381;
 	    for (int i = 0; i < KeySize / 2; ++i) {
 #pragma HLS unroll
@@ -192,7 +192,7 @@ private:
     }
 
     index_t h_b(index_t seed, const memcached_key<KeySize>& tag) const {
-#pragma HLS pipeline enable_flush ii=4
+#pragma HLS pipeline enable_flush ii=3
 	    for (int i = KeySize / 2; i < KeySize; ++i) {
 #pragma HLS unroll
 		    seed = ((seed << 5) + seed) + tag.data[i];

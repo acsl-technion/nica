@@ -38,8 +38,8 @@
 
 #include <ikernel.hpp>
 #include <gateway.hpp>
-#include <context_manager.hpp>
-#include <scheduler.hpp>
+#include <ntl/context_manager.hpp>
+#include <ntl/scheduler.hpp>
 
 DECLARE_TOP_FUNCTION(pktgen_top);
 
@@ -57,23 +57,23 @@ struct pktgen_context {
     hls_ik::metadata metadata;
 };
 
-class pktgen_contexts : public context_manager<pktgen_context, LOG_NUM_IKERNELS>
+class pktgen_contexts : public ntl::context_manager<pktgen_context, LOG_NUM_IKERNELS>
 {
 public:
     int rpc(int address, int *value, hls_ik::ikernel_id_t ikernel_id, bool read);
 };
 
-class pktgen : public hls_ik::ikernel, public hls_ik::virt_gateway_impl<pktgen> {
+class pktgen : public hls_ik::ikernel {
 public:
     pktgen();
 
-    virtual void step(hls_ik::ports& ports, hls_ik::tc_ikernel_data_counts& tc);
+    void step(hls_ik::ports& ports, hls_ik::tc_ikernel_data_counts& tc);
 
     int reg_write(int address, int value, hls_ik::ikernel_id_t ikernel_id);
     int reg_read(int address, int* value, hls_ik::ikernel_id_t ikernel_id);
 
 private:
-    scheduler<LOG_NUM_IKERNELS> sched;
+    ntl::scheduler<LOG_NUM_IKERNELS> sched;
 
     void data_plane(hls_ik::pipeline_ports& p, hls_ik::tc_pipeline_data_counts& tc);
     void sched_wrapper();

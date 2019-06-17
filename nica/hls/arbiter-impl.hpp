@@ -30,17 +30,18 @@
 #include "gateway.hpp"
 #include "arbiter.hpp"
 #include "nica-top.hpp"
-#include "scheduler.hpp"
+#include <ntl/scheduler.hpp>
+#include <ntl/constexpr.hpp>
 #include "tc-ports.hpp"
 
-class arbiter : public hls_ik::gateway_impl<arbiter>
+class arbiter
 {
 public:
-    static const unsigned num_streams_width = hls_helpers::log2(NUM_TC);
+    static const unsigned num_streams_width = ntl::log2(NUM_TC);
     typedef hls_ik::data_stream stream;
-    maybe<ap_uint<udp::udp_builder_metadata::width> > peek_metadata[NUM_TC];
+    ntl::maybe<ap_uint<udp::udp_builder_metadata::width> > peek_metadata[NUM_TC];
 
-    typedef scheduler<num_streams_width> scheduler_t;
+    typedef ntl::scheduler<num_streams_width> scheduler_t;
     typedef typename scheduler_t::index_t index_t;
     scheduler_t sched;
 
@@ -67,7 +68,13 @@ public:
 #pragma HLS pipeline II=3
         /* Inline the gateway here */
 #pragma HLS inline region
-        hls_ik::gateway_impl<arbiter>::gateway(this, g);
+        gateway.gateway(g, [=](ap_uint<31> addr, int& data) -> int {
+#pragma HLS inline
+            if (addr & hls_ik::GW_WRITE)
+                return reg_write(addr & ~hls_ik::GW_WRITE, data);
+            else
+                return reg_read(addr & ~hls_ik::GW_WRITE, &data);
+        });
 
         if (sched.update())
             return;
@@ -327,6 +334,8 @@ private:
     int accumulated_charge;
     /* Number of flits a port is allowed to send before it is evicted */
     uint32_t quota;
+
+    ntl::gateway_impl<int> gateway;
 };
 
 void arbiter_top(udp::udp_builder_metadata_stream& hdr_out, hls_ik::data_stream& out,

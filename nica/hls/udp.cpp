@@ -58,7 +58,7 @@ header_parser::operator header_buffer()
 
 header_data_split::header_data_split() :
     state(IDLE),
-    pkt_id(0)
+    meta(mlx::metadata())
 {}
 
 steering::steering() :
@@ -197,42 +197,38 @@ void steering::steer(header_stream& hdr_in, hls_ik::data_stream& data_in, bool_s
                              data_out);
 }
 
-void header_data_split::split(mlx::stream& in,
-                              header_stream& header, hls_ik::data_stream& data)
+void header_data_split::split(header_stream& header, hls_ik::data_stream& data)
 {
 #pragma HLS PIPELINE enable_flush
-    mlx::axi4s cur;
+    ntl::axi_data cur;
     /* Where does the header end and data start in the second word, in bits */
     const int data_start = 512 - header_buffer::width;
 
     switch (state) {
     case IDLE:
 idle:
-        if (!in.empty()) {
-            in.read(cur);
+        if (!extract_metadata.out_metadata.empty() && !extract_metadata.out_data.empty()) {
+            cur = extract_metadata.out_data.read();
             buffer = cur.data;
-            pkt_id = cur.id;
-            user = cur.user;
+            meta = extract_metadata.out_metadata.read();
             state = READING_HEADER;
         }
         break;
     case READING_HEADER:
-        if (!in.empty() && !header.full()) {
-            in.read(cur);
-            assert(cur.user == user);
+        if (!extract_metadata.out_data.empty() && !header.full()) {
+            cur = extract_metadata.out_data.read();
 
             HEADER_BUFFER(buf,
                 (buffer, cur.data(255, data_start)),
-                pkt_id, user, false);
+                meta.id, meta.user, false);
             buffer = cur.data;
             state = cur.last ? LAST : STREAM;
             header.write(buf);
         }
         break;
     case STREAM:
-        if (!in.empty() && !data.full()) {
-            in.read(cur);
-            assert(cur.user == user);
+        if (!extract_metadata.out_data.empty() && !data.full()) {
+            cur = extract_metadata.out_data.read();
 
             hls_ik::axi_data buf = hls_ik::axi_data((ap_uint<256>((buffer(data_start - 1, 0),
                                                     cur.data(255, data_start)))), 0xffffffff, 0);
@@ -252,6 +248,14 @@ idle:
         state = IDLE;
         goto idle;
     }
+}
+
+void header_data_split::step(mlx::stream& in,
+                             header_stream& header, hls_ik::data_stream& data)
+{
+#pragma HLS inline
+    extract_metadata.step(in);
+    split(header, data);
 }
 
 length_adjust::length_adjust() :
@@ -598,7 +602,7 @@ void udp::udp_step(mlx::stream& in,
     DO_PRAGMA(HLS STREAM variable=header_dup_to_length depth=FIFO_PACKETS);
     DO_PRAGMA(HLS STREAM variable=header_dup_to_crossbar depth=FIFO_PACKETS);
 
-    hds.split(in, header_split_to_steer, data_split_to_steer);
+    hds.step(in, header_split_to_steer, data_split_to_steer);
     steer.steer(header_split_to_steer, data_split_to_steer, bool_pass_raw,
                 header_steer_to_dup, data_steer_to_length, steer_results, config, &stats->hds);
     hdr_dup.dup2(header_steer_to_dup,

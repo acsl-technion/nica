@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "hls_helper.h"
+#include <ntl/constexpr.hpp>
 
 #include <cassert>
 
@@ -37,7 +37,7 @@ template <typename Left, typename Right>
 class either : public boost::equality_comparable<either<Left, Right> >
 {
 public:
-    enum { width = 1 + hls_helpers::max(Left::width, Right::width), };
+    enum { width = 1 + ntl::max(Left::width, Right::width), };
 
     bool is_left() const { return !data(width - 1, width - 1); }
 

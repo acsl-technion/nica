@@ -27,9 +27,9 @@
 #include "ikernel.hpp"
 #include "udp.h"
 #include "gateway.hpp"
-#include "push_header.hpp"
-#include "push_suffix.hpp"
-#include "context_manager.hpp"
+#include <ntl/push_header.hpp>
+#include <ntl/push_suffix.hpp>
+#include <ntl/context_manager.hpp>
 
 struct ring_context
 {
@@ -39,7 +39,7 @@ struct ring_context
     ap_uint<24> psn;
 };
 
-class ring_context_manager : public context_manager<ring_context, CUSTOM_RINGS_LOG_NUM> {
+class ring_context_manager : public ntl::context_manager<ring_context, CUSTOM_RINGS_LOG_NUM> {
 public:
     int gateway_write(int address, int value);
     int gateway_read(int address, int* value);
@@ -54,7 +54,7 @@ struct hdr_to_data
 };
 
 /* Build RoCE UC send packets from ikernel outputs */
-class custom_rx_ring : public hls_ik::gateway_impl<custom_rx_ring>
+class custom_rx_ring
 {
 public:
     custom_rx_ring();
@@ -84,10 +84,12 @@ private:
     hls::stream<ap_uint<32> > icrc;
     hls::stream<bool> empty_packet, empty_packet_bth, empty_packet_icrc,
                       enable_stream, enable_bth, enable_icrc;
-    push_header<12 * 8> push_bth;
-    push_suffix<4> push_icrc;
+    ntl::push_header<12 * 8> push_bth;
+    ntl::push_suffix<4> push_icrc;
 
     /* Data-path state */
     enum { IDLE, STREAM } state;
     udp::udp_builder_metadata cur_metadata;
+
+    ntl::gateway_impl<int> gateway;
 };

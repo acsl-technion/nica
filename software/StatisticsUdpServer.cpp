@@ -124,6 +124,18 @@ StatisticsUdpServer::StatisticsUdpServer(boost::asio::io_service &io_service, co
 		perror("ik_write for threshold ring id");
 		return;
 	}
+
+        ret = ik_write(ik, THRESHOLD_COUNT, 0);
+        ret = ret || ik_write(ik, THRESHOLD_VALUE, 0);
+        ret = ret || ik_write(ik, THRESHOLD_DROPPED, 0);
+        ret = ret || ik_write(ik, THRESHOLD_MIN, 0);
+        ret = ret || ik_write(ik, THRESHOLD_MAX, 0);
+        ret = ret || ik_write(ik, THRESHOLD_SUM_LO, 0);
+        ret = ret || ik_write(ik, THRESHOLD_DROPPED_BACKPRESSURE, 0);
+        if (ret) {
+            perror("ik_write");
+            return;
+        }
     }
 }
 

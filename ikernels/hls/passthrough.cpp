@@ -80,7 +80,7 @@ void passthrough::intercept_in(pipeline_ports& p, tc_pipeline_data_counts& tc) {
 
 void passthrough::step(ports& p, tc_ikernel_data_counts& tc) {
 #pragma HLS inline
-    memory_unused(p.mem, dummy_update);
+    memory_unused.step(p.mem);
     pass_packets(p.host);
     intercept_in(p.net, tc.net);
     dropper.filter(_decisions, p.net.data_input, p.net.data_output);

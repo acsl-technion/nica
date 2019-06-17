@@ -46,8 +46,8 @@ void arbiter_top(udp::udp_builder_metadata_stream& hdr_out, hls_ik::data_stream&
     trace_event events[NUM_TRACE_EVENTS];
     static tc_ports tc;
 #define BOOST_PP_LOCAL_MACRO(i) \
-    DO_PRAGMA(HLS STREAM variable=tc.data ## i depth=FIFO_WORDS); \
-    DO_PRAGMA(HLS STREAM variable=tc.meta ## i depth=FIFO_WORDS); \
+    DO_PRAGMA(HLS STREAM variable=&tc.data ## i depth=FIFO_WORDS); \
+    DO_PRAGMA(HLS STREAM variable=&tc.meta ## i depth=FIFO_WORDS); \
     \
     link_fifo(port[i], tc.data ## i); \
     link_fifo(meta[i], tc.meta ## i);

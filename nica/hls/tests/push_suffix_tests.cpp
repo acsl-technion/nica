@@ -23,10 +23,13 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "push_suffix.hpp"
+#include <ntl/push_suffix.hpp>
 #include "gtest/gtest.h"
 
 namespace {
+
+    using ntl::push_suffix;
+    using ntl::axi_data;
 
     class push_suffix_tests : public ::testing::TestWithParam<unsigned> {
     protected:
@@ -41,7 +44,7 @@ namespace {
         push_suffix<4> push;
     };
 
-    void write_sized_packet(hls_ik::data_stream& s, unsigned size)
+    void write_sized_packet(hls::stream<axi_data>& s, unsigned size)
     {
 	char c = 0;
 
@@ -50,21 +53,21 @@ namespace {
 	    for (unsigned cur_char = 0; cur_char < 32u; ++cur_char)
 		buf[cur_char] = ++c;
 
-            hls_ik::axi_data out;
+            axi_data out;
             out.set_data(buf, std::min(32u, size - i));
 	    out.last = i + 32 >= size;
             s.write(out);
         }
     }
 
-    unsigned get_packet_size(hls_ik::data_stream& s, unsigned orig_size)
+    unsigned get_packet_size(hls::stream<axi_data>& s, unsigned orig_size)
     {
         unsigned size = 0;
 	char c = 0;
         const unsigned orig_size_aligned = (orig_size + 3) & ~0x3;
 
         while (!s.empty()) {
-            hls_ik::axi_data out = s.read();
+            axi_data out = s.read();
             char buf[32];	
             unsigned cur_size = out.get_data(buf);
 
@@ -87,7 +90,7 @@ namespace {
 
     TEST_P(push_suffix_tests, one_packet)
     {
-        hls_ik::data_stream in("in"), out("out");
+        hls::stream<axi_data> in("in"), out("out");
         hls::stream<bool> enable_stream("enable"), empty_packet("empty");
 	using suffix_t = push_suffix<4>::suffix_t;
         hls::stream<suffix_t> suffix("suffix");
@@ -96,7 +99,7 @@ namespace {
         empty_packet.write(GetParam() == 0);
         suffix.write(suffix_t(0xa1a2a3a4));
         write_sized_packet(in, GetParam());
-	for (unsigned i = 0; i < (1 + GetParam()) * 2; ++i)
+	for (unsigned i = 0; i < (2 + GetParam()) * 2; ++i)
 	    push.reorder(in, empty_packet, enable_stream, suffix, out);
         unsigned expected_size = (GetParam() + 4 + 3) & ~3; /* 4 byte aligned */
 	EXPECT_EQ(expected_size, get_packet_size(out, GetParam()));
@@ -104,14 +107,13 @@ namespace {
 
     TEST_P(push_suffix_tests, disabled)
     {
-        hls_ik::data_stream in("in"), out("out");
+        hls::stream<axi_data> in("in"), out("out");
         hls::stream<bool> enable_stream("enable"), empty_packet("empty");
 	using suffix_t = push_suffix<4>::suffix_t;
         hls::stream<suffix_t> suffix("suffix");
 
         empty_packet.write(GetParam() == 0);
         enable_stream.write(false);
-        suffix.write(suffix_t(0xa1a2a3a4));
         write_sized_packet(in, GetParam());
 	for (unsigned i = 0; i < 1 + GetParam() * 2; ++i)
 	    push.reorder(in, empty_packet, enable_stream, suffix, out);

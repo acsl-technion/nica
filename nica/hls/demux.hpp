@@ -25,13 +25,14 @@
 #pragma once
 
 #include <hls_stream.h>
+#include <ntl/constexpr.hpp>
 #include "tc-ports.hpp"
 
 template <unsigned num_ports>
 class demultiplexor
 {
 public:
-    static const unsigned log_num_ports = hls_helpers::log2(num_ports);
+    static const unsigned log_num_ports = ntl::log2(num_ports);
     /* Minimum width of 1 since HLS doesn't deal with 0 width values */
     static const unsigned num_streams_width = log_num_ports ? log_num_ports : 1;
     typedef hls_ik::data_stream stream;
@@ -169,7 +170,7 @@ private:
     index_t select_port(const udp::udp_builder_metadata& metadata)
     {
 #pragma HLS inline
-        static_assert(NUM_TC == 1 << hls_helpers::log2(NUM_TC), "NUM_TC must be power of two");
+        static_assert(NUM_TC == 1 << ntl::log2(NUM_TC), "NUM_TC must be power of two");
         int ik_id = metadata.ikernel_id & (NUM_TC - 1);
         if (ik_id >= num_ports) {
             ik_id -= num_ports;

@@ -25,6 +25,9 @@
 #include "flow_table_impl.hpp"
 #include "udp.h"
 
+using ntl::maybe;
+using ntl::make_maybe;
+
 using udp::header_stream;
 using namespace hls_ik;
 
@@ -99,7 +102,14 @@ void flow_table::ft_wrapper(header_stream& header, result_stream& result,
 {
 #pragma HLS pipeline enable_flush ii=3
 #pragma HLS inline region
-    gateway(this, g);
+    gateway.gateway(g, [=](ap_uint<31> addr, int& data) -> int {
+#pragma HLS inline
+        if (addr & GW_WRITE)
+            return reg_write(addr & ~GW_WRITE, data);
+        else
+            return reg_read(addr & ~GW_WRITE, &data);
+    });
+
     
     if (!header.empty() && !hash_flow_table.lookups.full()) {
         auto packet_flow_info = flow::from_header(header.read()) &

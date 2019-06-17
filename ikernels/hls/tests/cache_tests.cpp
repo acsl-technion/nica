@@ -23,10 +23,12 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "cache.hpp"
+#define CACHE_ENABLE_DEBUG_COMMANDS
+
+#include <ntl/cache.hpp>
 #include "gtest/gtest.h"
 
-namespace {
+namespace ntl {
 
 #define CACHE_SIZE 10
 

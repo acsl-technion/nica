@@ -27,6 +27,8 @@
 #include "hls_helper.h"
 #include <iostream>
 
+#include <ntl/produce.hpp>
+
 using namespace hls_ik;
 
 int cms::reg_write(int address, int value, ikernel_id_t ikernel_id)
@@ -156,8 +158,8 @@ void cms::step(hls_ik::ports& p, hls_ik::tc_ikernel_data_counts& tc)
 #pragma HLS inline
     pass_packets(p.host);
     net_ingress(p.net);
-    hls_helpers::produce(p.net.data_output);
-    hls_helpers::produce(p.net.metadata_output);
+    ntl::produce(p.net.data_output);
+    ntl::produce(p.net.metadata_output);
 }
 
 static cms cms_inst;
@@ -179,11 +181,17 @@ void cms_ikernel(hls_ik::ports& ik, hls_ik::ikernel_id& uuid,
 	DO_PRAGMA(HLS interface ap_none port=k_value)
 
 	using namespace hls_ik;
-    static const ikernel_id __constant_uuid = { CMS_UUID };
+    constexpr ikernel_id __constant_uuid = { CMS_UUID };
     cms_inst.step(ik, tc);
     cms_inst.write_to_heap(to_heap);
     cms_inst.read_heap(heap_out, k_value);
-    cms_inst.gateway(&cms_inst, gateway);
+    cms_inst.gateway.gateway(gateway.common, [=](ap_uint<31> addr, int& data) -> int {
+        DO_PRAGMA(HLS inline)
+        if (addr & GW_WRITE)
+            return cms_inst.reg_write(addr & ~GW_WRITE, data, gateway.ikernel_id);
+        else
+            return cms_inst.reg_read(addr & ~GW_WRITE, &data, gateway.ikernel_id);
+    });
 output_uuid: uuid = __constant_uuid;
 }
 

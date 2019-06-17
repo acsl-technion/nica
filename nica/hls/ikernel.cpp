@@ -25,6 +25,9 @@
 
 #include "ikernel.hpp"
 
+#include <ntl/produce.hpp>
+#include <ntl/consume.hpp>
+
 #define TC_META_THRESHOLD 256
 #define TC_DATA_THRESHOLD 256
 
@@ -114,20 +117,4 @@ namespace hls_ik {
         init(tc.net);
     }
 
-    void memory_unused(memory_t& m, hls::stream<bool>& dummy_update)
-    {
-#pragma HLS inline
-        bool dummy;
-
-        dummy_update.write_nb(false);
-
-        if (!dummy_update.read_nb(dummy))
-            dummy = false;
-
-        hls_helpers::produce(m.ar, dummy);
-        hls_helpers::produce(m.aw, dummy);
-        hls_helpers::produce(m.w, dummy);
-        hls_helpers::consume(m.r, dummy);
-        hls_helpers::consume(m.b, dummy);
-    }
 }
