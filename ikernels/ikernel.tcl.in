@@ -1,0 +1,5 @@
+source "@CMAKE_SOURCE_DIR@/nica/ikernel.tcl"
+
+create_project @IKERNEL@ @IKERNEL_TOP@ @CMAKE_CURRENT_SOURCE_DIR@ {@IKERNEL_SOURCES@} \
+    {@IKERNEL_TESTBENCH_SOURCES@}
+exit

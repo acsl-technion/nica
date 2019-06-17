@@ -1,0 +1,114 @@
+#!groovy
+
+def VIVADO='/opt/Xilinx/Vivado/2016.2'
+def VIVADO_ENV=". ${VIVADO}/settings64.sh ;"
+
+node {
+    def DEFAULT_BUILD_NUM = 'latest'
+    def ikernels = ['threshold', 'passthrough', 'pktgen', 'echo', 'cms', 'memcached'].join('\n')
+    properties ([parameters([
+        string(name: 'BUILD_NUM',         defaultValue: DEFAULT_BUILD_NUM, description: 'netperf-hw build number'),
+        string(name: 'NETPERF_HW_BRANCH', defaultValue: env.BRANCH_NAME,   description: 'netperf-hw branch name'),
+        choice(name: 'NUM_IKERNELS', description: 'number of ikernels to use', choices: '1\n2'),
+        choice(name: 'IKERNEL0', description: 'first ikernel to use',  choices: ikernels),
+        choice(name: 'IKERNEL1', description: 'second ikernel to use', choices: ikernels),
+        booleanParam(name: 'SIGMON_ENABLE', description: 'Enable signal monitoring infrastructure', defaultValue: true)
+    ])])
+
+    def buildNumber;
+    def LAST_COMPLETED_BUILD_SELSECTOR = [$class: 'LastCompletedBuildSelector'];
+    try {
+        buildNumber = "${params.BUILD_NUM}"
+    } catch (e) {
+        echo """********************************************************************************************"
+The build parameters for this branch are not yet initialized (or were modified).
+Will attempt to run against the latest build of netperf-hw/master.
+********************************************************************************************"""
+        buildNumber = DEFAULT_BUILD_NUM
+    }
+    currentBuild.description = "${params.IKERNEL0}, $buildNumber"
+
+    if (buildNumber.toLowerCase() == "latest") {
+        selector = LAST_COMPLETED_BUILD_SELSECTOR;
+    } else {
+        selector = [$class: 'SpecificBuildSelector', buildNumber: "${buildNumber}"];
+    }
+
+    stage('Preparation') {
+        // Fetch our code
+        checkout scm
+        sh 'git clean -xfd nica/xci'
+        dir('build') {
+            // Extract Mellanox shell SDK
+            sh '''rsync gpu-os06.ef.technion.ac.il:/home/haggai/jenkins/newton_ku060_2_40g_v640.tar . &&
+                ../scripts/prepare-mellanox-shell.sh newton_ku060_2_40g_v640.tar'''
+            // Copy NICA and Threshold ikernels
+            def num_ikernels = params.NUM_IKERNELS.toInteger()
+            if (num_ikernels == 1) {
+                step ([$class: 'CopyArtifact',
+                       projectName: "netperf-hw/${params.NETPERF_HW_BRANCH}",
+                       filter: 'nica/build/nica/nica/**/*',
+                       selector: selector]);
+            } else if (num_ikernels == 2) {
+                step ([$class: 'CopyArtifact',
+                       projectName: "netperf-hw/${params.NETPERF_HW_BRANCH}",
+                       filter: 'nica/build-2/nica/nica/**/*',
+                       selector: selector]);
+            }
+            step ([$class: 'CopyArtifact',
+                   projectName: "netperf-hw/${params.NETPERF_HW_BRANCH}",
+                   filter: "nica/build/ikernels/${params.IKERNEL0}/**/*",
+                   selector: selector]);
+            if (num_ikernels > 1) {
+                step ([$class: 'CopyArtifact',
+                       projectName: "netperf-hw/${params.NETPERF_HW_BRANCH}",
+                       filter: "nica/build/ikernels/${params.IKERNEL1}/**/*",
+                       selector: selector]);
+            }
+            // Move HLS artifacts to their right place
+            sh 'rm -rf nica~ ikernels && mv nica nica~ && mv nica~/build/* .'
+        }
+    }
+    withEnv(["IKERNEL0=${params.IKERNEL0}",
+             "IKERNEL1=${params.IKERNEL1}",
+             "NUM_IKERNELS=${params.NUM_IKERNELS}",
+             "SIGMON_ENABLE=${params.SIGMON_ENABLE ? 1 : 0}"]) {
+        // TODO fix testbench with the external SDK file
+        // stage('Simulation') {
+        //     dir('tb/exp_vlog') {
+        //         sh 'echo Running simulation for $IKERNEL0, $IKERNEL1. Build number $BUILD_NUMBER'
+        //         sh VIVADO_ENV + "vivado -mode batch -source sim.tcl"
+        //     }
+        // }
+        stage('Synthesis') {
+            dir('build/user/project') {
+                try {
+                    echo "Build number ${env.BUILD_NUMBER}"
+                    sh 'echo Build $BUILD_NUMBER'
+                    echo "License server: XILINXD_LICENSE_FILE=${env.XILINXD_LICENSE_FILE}"
+                    sh VIVADO_ENV + "vivado -mode batch -source create_project.tcl -tclargs xcku060-ffva1156-2-i"
+                    archiveArtifacts 'vivado.log'
+                    archiveArtifacts 'Synth/*/*.rpt'
+                    archiveArtifacts 'Synth/*/*.xml'
+                    dir('Implement/Impl_fullchip') {
+                        sh VIVADO_ENV + "vivado -mode batch -source ../../../scripts/mellanox/gen_flash.tcl"
+                        archiveArtifacts 'reports/*'
+                        archiveArtifacts 'top.bin'
+                        archiveArtifacts 'top.mcs'
+                        archiveArtifacts 'top.bit'
+                    }
+                    sh '! grep VIOLATED Implement/Impl_fullchip/reports/top_timing_summary.rpt > /dev/null'
+                    currentBuild.result = 'SUCCESS'
+                } catch (Exception err) {
+                    echo "Error: Exception ${err}"
+                    currentBuild.result = 'FAILURE'
+                }
+            }
+        }
+    }
+}
+
+color = 'warning'
+if (currentBuild.result == 'SUCCESS')
+    color = 'good'
+slackSend color: color, message: "Build ${env.JOB_NAME} ${env.BUILD_NUMBER} (<${env.BUILD_URL}|${env.BUILD_NUMBER}> completed: result = ${currentBuild.result})"

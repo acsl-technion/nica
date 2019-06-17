@@ -1,0 +1,12 @@
+*.o
+tests/netperf_tb
+test_project
+export_project
+threshold/
+tags
+\#*\#
+*~
+.*.swp
+vivado_hls.log
+temp.log
+*.pyc
