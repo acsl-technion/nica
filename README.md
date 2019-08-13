@@ -58,6 +58,12 @@ cmake -DBUILD_GMOCK=OFF -DBUILD_GTEST=ON .
 make -j
 ```
 
+To get the `ntl` submodule updated use the command:
+
+```shell
+git submodule update --init
+```
+
 Assuming this repository is at `~/workspace/nica`, configure it by:
 
 ```shell
