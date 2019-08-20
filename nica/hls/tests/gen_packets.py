@@ -33,7 +33,7 @@ def make_pkt(sz):
     pkt = Ether()/IP()/UDP(dport=0x0bad, sport=sz)/Vector(list=payload)
     return pkt
 
-sizes = range(32) + [2**x + x for x in range(5, 10)] + [1500 - 14 - 20 - 8]
+sizes = list(range(32)) + [2**x + x for x in range(5, 10)] + [1500 - 14 - 20 - 8]
 pkts = []
 for sz in sizes:
     pkt = make_pkt(sz)
