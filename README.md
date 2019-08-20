@@ -52,17 +52,21 @@ and build it:
 
 ```shell
 cd ~/workspace
-git clone https://github.com/google/googletest    
+git clone https://github.com/google/googletest --branch v1.8.x
 cd googletest
 cmake -DBUILD_GMOCK=OFF -DBUILD_GTEST=ON .
 make -j
 ```
+
+The tests also depend on scapy (`python2-scapy` on CentOS) to generate pcap files. 
 
 To get the `ntl` submodule updated use the command:
 
 ```shell
 git submodule update --init
 ```
+
+Some of the ikernels rely on additional libraries, such as `openssl-devel` (CoAP).
 
 Assuming this repository is at `~/workspace/nica`, configure it by:
 
