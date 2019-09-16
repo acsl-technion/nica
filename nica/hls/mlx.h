@@ -25,6 +25,7 @@
 #ifndef MLX_H
 #define MLX_H
 
+#include <cstddef>
 #include <tuple>
 #include <ap_int.h>
 #include <ntl/stream.hpp>
