@@ -68,7 +68,7 @@ class heap {
         while (!doneBubble) {
             int childIdx = child(idx);
             if (childIdx == -1) return idx; //base case: no children left
-            int minIdx = getMinIdx(idx, childIdx, childIdx + 1);
+            unsigned int minIdx = getMinIdx(idx, childIdx, childIdx + 1);
 
             if (minIdx != idx) {
                 std::swap(_data[minIdx], _data[idx]);
@@ -84,7 +84,7 @@ class heap {
     // Used by bubbleDown()
     //  Get the index of the min value
     //  between 3 given indices to the heap array.
-    int getMinIdx(unsigned int aIdx, unsigned int bIdx, unsigned int cIdx) {
+    unsigned int getMinIdx(unsigned int aIdx, unsigned int bIdx, unsigned int cIdx) {
         bool isLeftSmaller = (_data[aIdx] < _data[bIdx]);
 
         if (cIdx >= _size) { //the last right child doesnt exist

@@ -292,12 +292,12 @@ void coap::pad_block(ap_uint<SHA256_BLOCK_BITS>& dest, ap_uint<Width>& src) {
     hls_helpers::memcpy<Length / 8, SHA256_BLOCK_BITS, Width>(dest, src);
     hls_helpers::write_byte<SHA256_BLOCK_BITS>(dest, Length / 8, 0x80);
 
-    for (int i = 0; i < 56 - Length / 8; ++i) {
+    for (unsigned int i = 0; i < 56 - Length / 8; ++i) {
 #pragma HLS unroll
         hls_helpers::write_byte<SHA256_BLOCK_BITS>(dest, 1 + (Length / 8) + i, (unsigned char) 0);
     }
 
-    for (int i = 1; i <= 8; ++i) {
+    for (unsigned int i = 1; i <= 8; ++i) {
 #pragma HLS unroll
         hls_helpers::write_byte<SHA256_BLOCK_BITS>(dest, 55 + i, (unsigned char) (MessageLength >> (64 - 8 * i)));
     }
