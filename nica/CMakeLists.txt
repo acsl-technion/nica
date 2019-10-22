@@ -61,13 +61,6 @@ endforeach(f)
 
 add_test(NAME nica_tests COMMAND nica_tests)
 
-### add suffix tests
-add_executable(push_suffix_tests EXCLUDE_FROM_ALL
-    hls/tests/push_suffix_tests.cpp)
-add_dependencies(check push_suffix_tests)
-add_test(push_suffix_tests push_suffix_tests)
-add_gtest(push_suffix)
-
 ### add hash table / flow table tests
 add_executable(flow_table_tests EXCLUDE_FROM_ALL
     hls/tests/flow_table_tests.cpp)
