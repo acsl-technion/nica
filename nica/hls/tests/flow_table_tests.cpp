@@ -33,6 +33,10 @@ typedef hash_flow_table_t::value_type value_type;
 typedef hash_flow_table_t::maybe_value_t maybe_value_t;
 typedef hash_flow_table_t::tag_type tag_type;
 
+/* Instantiate here to make sure the code instantiated notices the
+ * CACHE_ENABLE_DEBUG_COMMANDS definition */
+template class ntl::hash_table_wrapper<flow, flow_table_value, FLOW_TABLE_SIZE>;
+
 using std::make_tuple;
 using std::get;
 
@@ -46,129 +50,6 @@ using ntl::make_maybe;
 void flow_table_top(header_stream& header, result_stream& result,
                     gateway_registers& g);
 namespace {
-
-    class hash_table_wrapper_tests : public ::testing::Test {
-    protected:
-        // SetUp() is run immediately before a test starts.
-        virtual void SetUp() {
-        }
-
-        // TearDown() is invoked immediately after a test finishes.
-        virtual void TearDown() {
-        }
-
-        int add_flow(const hash_flow_table_t::value_type& value)
-        {
-            int ret;
-            int result;
-
-            do {
-                ret = ht.gateway_add_entry(value, &result);
-                progress();
-            } while (ret == GW_BUSY);
-
-            EXPECT_EQ(ret, GW_DONE);
-            return result;
-        }
-
-        int delete_flow(const hash_flow_table_t::tag_type& tag)
-        {
-            int ret;
-            int result;
-
-            do {
-                ret = ht.gateway_delete_entry(tag, &result);
-                progress();
-            } while (ret == GW_BUSY);
-
-            EXPECT_EQ(ret, GW_DONE);
-            return result;
-        }
-
-        void debug_command(uint32_t address, bool write, maybe_value_t& entry)
-        {
-            int ret;
-
-            do {
-                ret = ht.gateway_debug_command(address, write, entry);
-                progress();
-            } while (ret == GW_BUSY);
-
-            EXPECT_EQ(ret, GW_DONE);
-        }
-
-        void progress()
-        {
-            ht.hash_table();
-        }
-
-        maybe_value_t get_entry(uint32_t address)
-        {
-            maybe_value_t entry;
-            debug_command(address, false, entry);
-            return entry;
-        }
-
-        void set_entry(uint32_t address, const maybe_value_t& entry)
-        {
-            maybe_value_t e = entry;
-            debug_command(address, false, e);
-        }
-
-	maybe<std::tuple<uint32_t, flow_table_value> > lookup(const flow& f)
-	{
-            ht.lookups.write(f);
-            for (int i = 0; i < 15; ++i) {
-                progress();
-
-                if (ht.results.empty())
-                    continue;
-
-                return ht.results.read();
-            }
-
-            assert(false);
-	}
-
-        hash_flow_table_t ht;
-    };
-
-    TEST_F(hash_table_wrapper_tests, add_delete)
-    {
-        for (int j = 0; j < 3; ++j) {
-            for (int i = 0; i < 100; ++i) {
-                flow f = { i };
-                flow_table_value value(FT_IKERNEL, i);
-
-                auto result = lookup(f);
-                EXPECT_FALSE(result.valid()) << "expect invalid entry " << i;
-
-                uint32_t index = add_flow(make_tuple(f, value));
-                EXPECT_NE(0, index);
-                EXPECT_EQ(0, add_flow(make_tuple(f, value)));
-
-                result = lookup(f);
-                EXPECT_TRUE(result.valid()) << "expect valid entry " << i;
-                EXPECT_EQ(get<1>(result.value()), value);
-                EXPECT_EQ(get<0>(result.value()), index);
-
-                maybe_value_t entry;
-                entry = get_entry(index - 1);
-                EXPECT_TRUE(entry.valid());
-                EXPECT_EQ(make_tuple(f, value), entry.value());
-
-                EXPECT_TRUE(delete_flow(f));
-                EXPECT_FALSE(delete_flow(f));
-
-                result = lookup(f);
-                EXPECT_FALSE(result.valid()) << "expect invalid entry " << i;
-
-                entry = get_entry(index - 1);
-                EXPECT_FALSE(entry.valid());
-            }
-        }
-    }
-
     class flow_table_tests : public ::testing::Test {
     protected:
         flow_table_wrapper gateway;
