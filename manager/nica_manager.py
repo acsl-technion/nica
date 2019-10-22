@@ -24,7 +24,7 @@ import netifaces
 from idpool import IDPool
 from util import mac_to_str, str_to_mac, inet_ntoa
 
-from nica import NicaHardware, FlowTable, inet_aton
+from nica import NicaHardware, FlowTable, inet_aton, default_mst_device
 
 FPGA_MAC = '00:00:00:00:00:01'
 FPGA_IP = '10.0.0.1'
@@ -510,14 +510,6 @@ class NetdevParavirt(Netdev, RPC):
     def update_credits(self, ring_id, msn_max):
         self.invoke(HypervisorOpcodes.UPDATE_CREDITS,
                     Struct('II'), (ring_id, msn_max))
-
-def default_mst_device():
-    '''Find the available MST device for the FPGA, or provide the default.'''
-    options = glob.glob('/dev/mst/*_fpga_rdma')
-
-    if options:
-        return options[0]
-    return '/dev/mst/mt4117_pciconf0_fpga_rdma'
 
 MST_DEVICE = default_mst_device()
 VIRTIO_DEVICE = '/dev/virtio-ports/nica'
