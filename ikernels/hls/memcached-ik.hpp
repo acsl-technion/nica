@@ -12,7 +12,7 @@
 #include <ntl/context_manager.hpp>
 #include <ntl/constexpr.hpp>
 #include "memcached_cache.hpp"
-#include "programmable_fifo.hpp"
+#include <ntl/programmable_fifo.hpp>
 
 #define MEMCACHED_LOG_RING_COUNT 10
 #define MEMCACHED_RING_COUNT (1 << MEMCACHED_LOG_RING_COUNT)
@@ -245,10 +245,10 @@ private:
     memcached_parsed_request _parsed_request;
     memcached_key_value_pair _parsed_response;
     hls_ik::metadata _in_metadata, _out_metadata;
-    programmable_fifo<bool, 300> _action_stream;
-    programmable_fifo<memcached_key_value_pair,300> _kv_pairs_stream;
-    programmable_fifo<memcached_parsed_request,300> _req_prs2mem;
-    programmable_fifo<memcached_parsed_request,300> _req_mem2mem;
+    ntl::programmable_fifo<bool, 300> _action_stream;
+    ntl::programmable_fifo<memcached_key_value_pair,300> _kv_pairs_stream;
+    ntl::programmable_fifo<memcached_parsed_request,300> _req_prs2mem;
+    ntl::programmable_fifo<memcached_parsed_request,300> _req_mem2mem;
     hls_ik::metadata_stream _reply_metadata_stream, _parser_metadata, _buffer_metadata;
     hls_ik::data_stream _parser_data, _buffer_data;
     hls_helpers::duplicator<1, ap_uint<hls_ik::axi_data::width> > _raw_dup;

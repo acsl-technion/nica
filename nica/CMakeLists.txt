@@ -68,11 +68,6 @@ add_dependencies(check flow_table_tests)
 add_test(flow_table_tests flow_table_tests)
 add_gtest(flow_table)
 
-add_executable(pfifo_tests EXCLUDE_FROM_ALL hls/tests/pfifo_tests.cpp)
-add_dependencies(check pfifo_tests)
-add_test(pfifo_tests pfifo_tests)
-add_gtest(pfifo)
-
 add_executable(arbiter_tests EXCLUDE_FROM_ALL hls/tests/arbiter_tests.cpp hls/arbiter.cpp hls/demux.cpp)
 add_dependencies(check arbiter_tests)
 add_test(arbiter_tests arbiter_tests)
