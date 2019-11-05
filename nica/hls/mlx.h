@@ -169,7 +169,7 @@ namespace mlx {
         void step(stream& in);
 
     private:
-        ntl::stream<axi4s> _enum_in;
+        void mlx_metadata();
         ntl::enum_first<axi4s> _enum;
     };
 }

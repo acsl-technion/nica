@@ -101,24 +101,28 @@ std::ostream& operator<<(::std::ostream& out, const metadata& m)
 
 void extract_metadata::step(stream& in)
 {
-    ntl::link(in, _enum_in);
-    _enum.step(_enum_in);
-    {
-        if (_enum.out.empty() || out_data.full() || out_metadata.full())
-            return;
+#pragma HLS inline
+    _enum.step(in);
+    mlx_metadata();
+}
 
-        int count;
-        axi4s flit;
-        std::tie(count, flit) = _enum.out.read();
+void extract_metadata::mlx_metadata()
+{
+#pragma HLS pipeline II=1 enable_flush
+    if (_enum.out.empty() || out_data.full() || out_metadata.full())
+        return;
 
-        metadata m;
-        ntl::axi_data axi_data_flit;
-        std::tie(m, axi_data_flit) = split_metadata(flit);
+    int count;
+    axi4s flit;
+    std::tie(count, flit) = _enum.out.read();
 
-        if (count == 0)
-            out_metadata.write(m);
-        out_data.write(axi_data_flit);
-    }
+    metadata m;
+    ntl::axi_data axi_data_flit;
+    std::tie(m, axi_data_flit) = split_metadata(flit);
+
+    if (count == 0)
+        out_metadata.write(m);
+    out_data.write(axi_data_flit);
 }
 
 }
