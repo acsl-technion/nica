@@ -109,20 +109,28 @@ void extract_metadata::step(stream& in)
 void extract_metadata::mlx_metadata()
 {
 #pragma HLS pipeline II=1 enable_flush
-    if (_enum.out.empty() || out_data.full() || out_metadata.full())
+    _enum_out.link(_enum.out);
+
+    if (_enum_out.empty() || out_data.full())
         return;
 
     int count;
     axi4s flit;
-    std::tie(count, flit) = _enum.out.read();
+    std::tie(count, flit) = _enum_out.peek();
 
     metadata m;
     ntl::axi_data axi_data_flit;
     std::tie(m, axi_data_flit) = split_metadata(flit);
 
-    if (count == 0)
+    if (count == 0) {
+        if (out_metadata.full())
+            return;
+
         out_metadata.write(m);
+    }
     out_data.write(axi_data_flit);
+
+    _enum_out.read();
 }
 
 }

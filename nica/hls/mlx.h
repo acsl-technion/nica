@@ -29,6 +29,7 @@
 #include <ap_int.h>
 #include <ntl/stream.hpp>
 #include <ntl/enumerate.hpp>
+#include <ntl/peek_stream.hpp>
 #include "hls_helper.h"
 #include "axi_data.hpp"
 
@@ -170,7 +171,10 @@ namespace mlx {
 
     private:
         void mlx_metadata();
-        ntl::enum_first<axi4s> _enum;
+        typedef ntl::enum_first<axi4s> enumerator;
+        enumerator _enum;
+        typedef enumerator::tuple_t enum_tuple;
+        ntl::peek_stream<enum_tuple> _enum_out;
     };
 }
 
