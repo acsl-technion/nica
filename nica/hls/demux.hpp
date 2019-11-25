@@ -171,7 +171,7 @@ private:
     {
 #pragma HLS inline
         static_assert(NUM_TC == 1 << ntl::log2(NUM_TC), "NUM_TC must be power of two");
-        int ik_id = metadata.ikernel_id & (NUM_TC - 1);
+        unsigned int ik_id = metadata.ikernel_id & (NUM_TC - 1);
         if (ik_id >= num_ports) {
             ik_id -= num_ports;
         }
