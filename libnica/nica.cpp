@@ -290,7 +290,7 @@ int ik_axi_read(ikernel* ik, int address, int* value) {
 }
 #endif
 
-int get_gid_index(ibv_context* dev)
+int get_gid_index(ibv_context* dev, const std::string& device_name)
 {
         for (int i = 0; i < 0xffff; ++i) {
                 ibv_gid gid;
@@ -306,7 +306,8 @@ int get_gid_index(ibv_context* dev)
                         continue;
 
                 char gid_type_str[7];
-                int len = ibv_read_sysfs_file("/sys/class/infiniband/mlx5_0/ports/1/gid_attrs/types",
+                int len = ibv_read_sysfs_file((std::string("/sys/class/infiniband/") + 
+                                device_name + "/ports/1/gid_attrs/types").c_str(),
                         boost::lexical_cast<string>(i).c_str(), gid_type_str, sizeof(gid_type_str));
                 if (len < 0) {
                         printf("cannot read gid type for gid %d", i);
@@ -413,7 +414,7 @@ struct custom_ring {
 	        qp_attr.ah_attr.port_num = PORT_NUM;
         	qp_attr.ah_attr.is_global = 1;
 	        qp_attr.ah_attr.grh.dgid = fpga_gid;
-        	qp_attr.ah_attr.grh.sgid_index = get_gid_index(context);
+        	qp_attr.ah_attr.grh.sgid_index = get_gid_index(context, device_name);
 	        qp_attr.ah_attr.grh.flow_label = 0;
         	qp_attr.ah_attr.grh.hop_limit = 1;
 	        qp_attr.ah_attr.grh.traffic_class = 0;
