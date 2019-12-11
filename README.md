@@ -58,7 +58,7 @@ cmake -DBUILD_GMOCK=OFF -DBUILD_GTEST=ON .
 make -j
 ```
 
-The tests also depend on scapy (`python2-scapy` on CentOS) to generate pcap files. 
+The tests also depend on scapy (`python36-scapy` on CentOS) to generate pcap files. 
 
 To get the `ntl` submodule updated use the command:
 
