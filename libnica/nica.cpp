@@ -37,6 +37,7 @@
 #include <cerrno>
 #include <string>
 #include <mutex>
+#include <iostream>
 
 #include <boost/thread/shared_mutex.hpp>
 #include <boost/filesystem/operations.hpp>
