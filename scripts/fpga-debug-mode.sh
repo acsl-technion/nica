@@ -1,6 +1,7 @@
 #!/bin/bash
 
-. ~/bin/fpga.inc.sh
+dir=$(dirname $0)
+. $dir/fpga.inc.sh
 
 regs=(0x9b0000 0x9b1000 0x990000 0x991000)
 values=(0x20 0x1 0x20 0x1)

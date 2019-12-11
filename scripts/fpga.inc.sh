@@ -24,6 +24,6 @@
 # SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-device=/dev/mst/mt4117_pciconf0_fpga
+device=$(ls /dev/mst/mt4117_pciconf*_fpga_i2c)
 read_cmd="sudo mlx_fpga -d $device read"
 write_cmd="sudo mlx_fpga -d $device write"
