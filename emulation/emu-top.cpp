@@ -27,7 +27,7 @@
 #include "nica-top.hpp"
 #include "threshold-impl.hpp"
 #include "passthrough-impl.hpp"
-#include "pktgen.hpp"
+#include "pktgen-impl.hpp"
 #include "memcached-ik.hpp"
 
 #include <boost/preprocessor/iteration/local.hpp>

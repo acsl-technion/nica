@@ -23,7 +23,7 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "pktgen.hpp"
+#include "pktgen-impl.hpp"
 #include "hls_helper.h"
 
 using namespace hls_helpers;
