@@ -9,6 +9,8 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake/Modules/
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-unknown-pragmas -Wno-unused-label")
 
 option(BUILD_SOFTWARE "Build software running on the host" ON)
+option(BUILD_HARDWARE "Build hardware / HLS artifacts" ON)
+
 set(NUM_IKERNELS 1 CACHE STRING "Number of ikernels to support")
 set(NUM_TC 4 CACHE STRING "Number of traffic classes")
 
@@ -129,7 +131,10 @@ function(add_ikernel ikernel sources testbench_sources hls_target_name top_funct
     hls_target("${ikernel}" "${hls_target_name}" "${sources};../nica/hls/ikernel.cpp" "${testbench_sources};${ARGV5}" "${top_function}")
 endfunction(add_ikernel)
 
-add_subdirectory(nica)
-add_subdirectory(ikernels)
-add_subdirectory(emulation)
+if(BUILD_HARDWARE)
+    add_subdirectory(nica)
+    add_subdirectory(ikernels)
+    add_subdirectory(emulation)
+endif()
+
 add_subdirectory(manager)

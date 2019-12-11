@@ -16,7 +16,7 @@ include(FindPkgConfig)
 pkg_check_modules(UUID REQUIRED uuid)
 
 include_directories(${UDP_INCLUDE_DIR} ${THRESHOLD_IKERNEL_DIR} ${NICA_HLS_DIR}
-    ${UUID_INCLUDE_DIRS} ${XILINX_VIVADO_HLS} ${IBVERBS_INCLUDE_DIRS} ../libnica)
+    ${UUID_INCLUDE_DIRS} ${IBVERBS_INCLUDE_DIRS} ../libnica)
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads REQUIRED)
