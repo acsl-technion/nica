@@ -29,57 +29,9 @@
 // e805b0d0-79ba-4c5d-b975-45316e452672
 #define CMS_UUID { 0xe8, 0x05, 0xb0, 0xd0, 0x79, 0xba, 0x4c, 0x5d, 0xb9, 0x75, 0x45, 0x31, 0x6e, 0x45, 0x26, 0x72 }
 
-#include "cms.hpp"
-#include <ikernel.hpp>
-#include <gateway.hpp>
-
-typedef ap_uint<32> value;
-
 #define READ_TOP_K 0
 #define TOPK_READ_NEXT_VALUE 1
 #define READ_K_VALUE 2
 #define HASHES_BASE 3
-
-struct value_and_frequency {
-    value entity;
-    value frequency;
-};
-
-void cms_ikernel(hls_ik::ports& ik, hls_ik::ikernel_id& uuid,
-                 hls_ik::virt_gateway_registers& gateway,
-                 value_and_frequency& to_heap,
-                 hls::stream<value_and_frequency>& heap_out,
-                 ap_uint<32> k_value,
-                 hls_ik::tc_ikernel_data_counts& tc);
-
-class cms : public hls_ik::ikernel {
-public:
-
-    void step(hls_ik::ports& ports, hls_ik::tc_ikernel_data_counts& tc);
-    int reg_write(int address, int value, hls_ik::ikernel_id_t ikernel_id);
-    int reg_read(int address, int* value, hls_ik::ikernel_id_t ikernel_id);
-
-    void write_to_heap(value_and_frequency& kv);
-    void read_heap(hls::stream<value_and_frequency>& heap_out, ap_uint<32> k_value);
-
-protected:
-    enum { METADATA, FIRST_WORD, OTHER_WORDS } _state;
-    enum { INITIAL, ENTITY, FREQUENCY } _read_state;
-
-    hls::stream<value> _values_stream;
-    hls::stream<int> _hashes_addresses;
-    hls::stream<int> _hashes_values;
-    hls::stream<bool> _topK_read_request;
-    hls::stream<value_and_frequency> _topK_values;
-
-    bool _reading_heap;
-    unsigned  _reading_index, _k;
-    value_and_frequency _next_topK_pair;
-
-    CountMinSketch sketch;
-
-    void net_ingress(hls_ik::pipeline_ports&);
-};
-
 
 #endif //CMS_IKERNEL_HPP

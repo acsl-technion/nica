@@ -23,7 +23,7 @@
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 
-#include "cms-ikernel.hpp"
+#include "cms-impl.hpp"
 #include "hls_helper.h"
 #include <iostream>
 
@@ -118,7 +118,14 @@ void cms::net_ingress(hls_ik::pipeline_ports& p) {
 
 void cms::write_to_heap(value_and_frequency& kv) {
 #pragma HLS pipeline enable_flush ii=3
-	sketch.setHashes(_hashes_addresses, _hashes_values);
+DO_PRAGMA(HLS array_partition variable=sketch.hashes dim=0 complete)
+DO_PRAGMA(HLS array_partition variable=sketch.C dim=1 factor=DEPTH)
+
+        if (!_hashes_addresses.empty() && !_hashes_values.empty()) {
+            int address = _hashes_addresses.read();
+            int v = _hashes_values.read();
+            sketch.updateByAddress(address, v);
+        }
 
 	if (!_values_stream.empty()) {
 		value val = _values_stream.read();
