@@ -48,7 +48,7 @@
 //const unsigned int DEPTH = std::ceil(log(1/GAMMA));
 
 /** CountMinSketch class definition here **/
-class CountMinSketch {
+struct CountMinSketch {
     // aj, bj \in Z_p
     // both elements of fild Z_p used in generation of hash
     // function
@@ -63,8 +63,6 @@ class CountMinSketch {
     // array of hash values for a particular item
     // contains two element arrays {aj,bj}
     int hashes[DEPTH][2];
-
-public:
 
     // constructor
     CountMinSketch();
