@@ -29,6 +29,7 @@ whole or in parts. Please cite our ATC'19 paper
 * [`scripts/`](scripts/), [`cmake/`](cmake/) - Scripts for building and running NICA.
 * [`emulation/`](emulation/) - Wraps NICA and AFU implementation in a library for host emulation.
 * [`ntl/`](https://github.com/acsl-technion/ntl) - Networking Template Library, included as a git submodule.
+* [`ansible/`](ansible/) - Ansible scripts to set up NICA dependencies.
 
 ## What's not here?
 
@@ -40,6 +41,15 @@ In addition, some code currently belongs to other repositories:
 * Modified memcached to use NICA-KVcache AFU.
 * Baseline and modified CoAP server for the authentication AFU.
 * Modified `sockperf` tool used for performance measurements.
+
+## Dependencies
+
+NICA's runtime and compile-time dependencies can be installed using an ansible
+role provided in the `ansible/` directory. You can use the example ansible
+playbook with the following command:
+
+    ansible-playbook -i <inventory file> [-l <hostname>] ansible/nica.yml
+
 
 ## Building HLS code
 
