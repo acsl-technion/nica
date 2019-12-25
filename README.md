@@ -45,11 +45,18 @@ In addition, some code currently belongs to other repositories:
 ## Dependencies
 
 NICA's runtime and compile-time dependencies can be installed using an ansible
-role provided in the `ansible/` directory. You can use the example ansible
-playbook with the following command:
+role provided in the `ansible/` directory. To use them, first 
+get the ansible mlnx ofed submodule updated using the command:
 
+```shell
+git submodule update --init
+```
+
+You can then use the example ansible playbook with the following command:
+
+```shell
     ansible-playbook -i <inventory file> [-l <hostname>] ansible/nica.yml
-
+```
 
 ## Building HLS code
 
