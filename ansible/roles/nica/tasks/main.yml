@@ -37,3 +37,27 @@
   pip:
     executable: "{{ pip.executable }}"
     name: pyinterval
+
+- name: Load FPGA module on boot
+  copy:
+    dest: /etc/modules-load.d/fpga.conf
+    content: |
+      mlx5_fpga_tools
+    mode: 0644
+
+- name: Load FPGA module now
+  modprobe: name=mlx5_fpga_tools
+  notify: "Restart mst"
+
+- name: Create mst.service systemd dir
+  file: dest=/etc/systemd/system/mst.service.d state=directory mode=0755
+
+- name: override mst.service to enable FPGA
+  copy:
+    dest: /etc/systemd/system/mst.service.d/override.conf
+    content: |
+      [Service]
+      ExecStart=
+      ExecStart=/etc/init.d/mst start --with_fpga
+    mode: 0644
+  notify: "Restart mst"
