@@ -1,0 +1,5 @@
+# Example playbook for NICA
+- hosts: all
+  become: yes
+  roles:
+  - nica

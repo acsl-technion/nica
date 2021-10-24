@@ -1,0 +1,31 @@
+---
+# tasks file for nica
+- include_vars: "{{ ansible_os_family }}.yml"
+
+- name: NICA rpm dependencies
+  package:
+    name:
+    - cmake3
+    - libuuid-devel
+    - python36-pip
+    - python36-scapy
+    - boost-devel
+    - libpcap-devel
+  when: ansible_os_family == 'RedHat'
+
+- name: NICA deb dependencies
+  package:
+    name:
+    - cmake
+    - uuid-dev
+    - python3-pip
+    - python3-scapy
+    - libboost-all-dev
+    - libcap-dev
+    state: latest
+  when: ansible_os_family == 'Debian'
+
+- name: NICA pip dependencies
+  pip:
+    executable: "{{ pip.executable }}"
+    name: pyinterval

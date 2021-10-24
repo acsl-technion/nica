@@ -29,6 +29,7 @@ whole or in parts. Please cite our ATC'19 paper
 * [`scripts/`](scripts/), [`cmake/`](cmake/) - Scripts for building and running NICA.
 * [`emulation/`](emulation/) - Wraps NICA and AFU implementation in a library for host emulation.
 * [`ntl/`](https://github.com/acsl-technion/ntl) - Networking Template Library, included as a git submodule.
+* [`ansible/`](ansible/) - Ansible scripts to set up NICA dependencies.
 
 ## What's not here?
 
@@ -40,6 +41,22 @@ In addition, some code currently belongs to other repositories:
 * Modified memcached to use NICA-KVcache AFU.
 * Baseline and modified CoAP server for the authentication AFU.
 * Modified `sockperf` tool used for performance measurements.
+
+## Dependencies
+
+NICA's runtime and compile-time dependencies can be installed using an ansible
+role provided in the `ansible/` directory. To use them, first 
+get the ansible mlnx ofed submodule updated using the command:
+
+```shell
+git submodule update --init
+```
+
+You can then use the example ansible playbook with the following command:
+
+```shell
+    ansible-playbook -i <inventory file> [-l <hostname>] ansible/nica.yml
+```
 
 ## Building HLS code
 
@@ -58,7 +75,7 @@ cmake -DBUILD_GMOCK=OFF -DBUILD_GTEST=ON .
 make -j
 ```
 
-The tests also depend on scapy (`python2-scapy` on CentOS) to generate pcap files. 
+The tests also depend on scapy (`python36-scapy` on CentOS) to generate pcap files. 
 
 To get the `ntl` submodule updated use the command:
 
