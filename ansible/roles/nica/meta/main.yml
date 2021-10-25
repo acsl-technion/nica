@@ -1,4 +1,6 @@
 galaxy_info:
+  role_name: nica
+  namespace: haggaie
   author: Haggai Eran
   description: PhD student
   company: Technion
@@ -32,17 +34,14 @@ galaxy_info:
   #
   # platforms is a list of platforms, and each platform has a name and a list of versions.
   #
-  # platforms:
-  # - name: Fedora
-  #   versions:
-  #   - all
-  #   - 25
-  # - name: SomePlatform
-  #   versions:
-  #   - all
-  #   - 1.0
-  #   - 7
-  #   - 99.99
+  platforms:
+  - name: Ubuntu
+    versions:
+    - bionic
+    - focal
+  - name: CentOS
+    versions:
+    - 7
 
   galaxy_tags: []
     # List tags for your role here, one per line. A tag is a keyword that describes
@@ -54,5 +53,5 @@ galaxy_info:
 
 dependencies:
   - src: https://github.com/haggaie/ansible-role-mlnx-ofed/
-    name: mlnx-ofed
-  
+    name: haggaie.mlnx_ofed
+
