@@ -126,7 +126,6 @@ StatisticsUdpServer::StatisticsUdpServer(boost::asio::io_service &io_service, co
 	}
 
         ret = ik_write(ik, THRESHOLD_COUNT, 0);
-        ret = ret || ik_write(ik, THRESHOLD_VALUE, 0);
         ret = ret || ik_write(ik, THRESHOLD_DROPPED, 0);
         ret = ret || ik_write(ik, THRESHOLD_MIN, 0);
         ret = ret || ik_write(ik, THRESHOLD_MAX, 0);

@@ -25,10 +25,12 @@
 #ifndef MLX_H
 #define MLX_H
 
+#include <cstddef>
 #include <tuple>
 #include <ap_int.h>
 #include <ntl/stream.hpp>
 #include <ntl/enumerate.hpp>
+#include <ntl/peek_stream.hpp>
 #include "hls_helper.h"
 #include "axi_data.hpp"
 
@@ -169,8 +171,11 @@ namespace mlx {
         void step(stream& in);
 
     private:
-        ntl::stream<axi4s> _enum_in;
-        ntl::enum_first<axi4s> _enum;
+        void mlx_metadata();
+        typedef ntl::enum_first<axi4s> enumerator;
+        enumerator _enum;
+        typedef enumerator::tuple_t enum_tuple;
+        ntl::peek_stream<enum_tuple> _enum_out;
     };
 }
 

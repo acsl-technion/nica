@@ -52,19 +52,6 @@ int CountMinSketch::getCell(const int row, const int col) const {
     return C[row][col];
 }
 
-
-
-// CountMinSketch setHashes
-void CountMinSketch::setHashes(hls::stream<int>& hashes_addresses,hls::stream<int>& hashes_values) {
-    if (hashes_addresses.empty() or hashes_values.empty()) {
-       return;
-    }
-    int address = hashes_addresses.read();
-    int v = hashes_values.read();
-    this->hashes[address/2][address%2] = v;
-}
-
-
 // CountMinSketch setHashes
 void CountMinSketch::setHashes(int hashes[DEPTH][2]) {
     for (int i = 0; i < DEPTH; ++i) {
@@ -78,8 +65,6 @@ void CountMinSketch::setHashes(int hashes[DEPTH][2]) {
 
 // CountMinSketch constructor
 CountMinSketch::CountMinSketch() : total(0), C() {
-DO_PRAGMA(HLS array_partition variable=hashes dim=0 complete)
-DO_PRAGMA(HLS array_partition variable=C dim=1 factor=DEPTH)
 }
 
 // CountMinSketch totalcount returns the
@@ -97,6 +82,11 @@ void CountMinSketch::update(int item, int c) {
         hashval = (hashes[j][0]*static_cast<unsigned int>(item)+hashes[j][1])%WIDTH;
         C[j][hashval] = C[j][hashval] + c;
     }
+}
+
+void CountMinSketch::updateByAddress(int address, int value)
+{
+    hashes[address/2][address%2] = value;
 }
 
 // countMinSketch update item count (string)

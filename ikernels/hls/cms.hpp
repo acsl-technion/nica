@@ -36,7 +36,6 @@
 #include <cmath>
 #include <algorithm>
 
-#include <ikernel.hpp>
 // define some constants
 # define LONG_PRIME 32993
 # define ERROR 0.01 // 0.01 < ERROR < 1
@@ -49,7 +48,7 @@
 //const unsigned int DEPTH = std::ceil(log(1/GAMMA));
 
 /** CountMinSketch class definition here **/
-class CountMinSketch {
+struct CountMinSketch {
     // aj, bj \in Z_p
     // both elements of fild Z_p used in generation of hash
     // function
@@ -65,19 +64,19 @@ class CountMinSketch {
     // contains two element arrays {aj,bj}
     int hashes[DEPTH][2];
 
-public:
-
     // constructor
     CountMinSketch();
 
     void setHashes(int hashes[DEPTH][2]);
-    void setHashes(hls::stream<int>& hashes_addresses,hls::stream<int>& hashes_values);
     int getCell(const int row, const int col) const;
 
     // update item (int) by count c
     void update(int item, int c);
     // update item (string) by count c
     void update(const char *item, int c);
+
+    // directly increase a specific counter
+    void updateByAddress(int address, int value);
 
     // estimate count of item i and return count
     unsigned int estimate(int item);

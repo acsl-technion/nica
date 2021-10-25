@@ -32,7 +32,7 @@
 #include "ikernel_tests.hpp"
 #include "threshold.hpp"
 #include "threshold-impl.hpp"
-#include "pktgen.hpp"
+#include "pktgen-impl.hpp"
 #include "custom_rx_ring.hpp"
 
 #include <uuid/uuid.h>

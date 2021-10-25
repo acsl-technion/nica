@@ -24,7 +24,7 @@
 //
 
 #include "ikernel_tests.hpp"
-#include "pktgen.hpp"
+#include "pktgen-impl.hpp"
 
 using namespace hls_ik;
 

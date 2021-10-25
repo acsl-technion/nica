@@ -24,7 +24,7 @@
 //
 
 #include "ikernel_tests.hpp"
-#include "cms-ikernel.hpp"
+#include "cms-impl.hpp"
 #include <vector>
 
 #define NUM_OF_MSGS 400

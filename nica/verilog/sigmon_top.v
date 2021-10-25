@@ -3418,7 +3418,7 @@ sigmon_logic_blocks sigmon_clbs (
 	  stream0_pattern_enable = sigmon_enable_event;
 	end
       default: begin
-	stream0_pattern_enable = 1'b0;;
+	stream0_pattern_enable = 1'b0;
       end
     endcase
 
@@ -3760,7 +3760,7 @@ sigmon_logic_blocks sigmon_clbs (
 //	  stream0_pattern_disable = sigmon_enable_event;
 //	end
       default: begin
-	stream0_pattern_disable = 1'b0;;
+	stream0_pattern_disable = 1'b0;
       end
     endcase
   end // always @ begin
@@ -4103,7 +4103,7 @@ sigmon_logic_blocks sigmon_clbs (
 	  stream1_pattern_enable = sigmon_enable_event;
 	end
       default: begin
-	stream1_pattern_enable = 1'b0;;
+	stream1_pattern_enable = 1'b0;
       end
     endcase
 
@@ -4445,7 +4445,7 @@ sigmon_logic_blocks sigmon_clbs (
 //	  stream1_pattern_disable = sigmon_enable_event;
 //	end
       default: begin
-	stream1_pattern_disable = 1'b0;;
+	stream1_pattern_disable = 1'b0;
       end
     endcase
   end // always @ begin
@@ -4788,7 +4788,7 @@ sigmon_logic_blocks sigmon_clbs (
 	  stream2_pattern_enable = sigmon_enable_event;
 	end
       default: begin
-	stream2_pattern_enable = 1'b0;;
+	stream2_pattern_enable = 1'b0;
       end
     endcase
 
@@ -5130,7 +5130,7 @@ sigmon_logic_blocks sigmon_clbs (
 //	  stream2_pattern_disable = sigmon_enable_event;
 //	end
       default: begin
-	stream2_pattern_disable = 1'b0;;
+	stream2_pattern_disable = 1'b0;
       end
     endcase
   end // always @ begin
@@ -5473,7 +5473,7 @@ sigmon_logic_blocks sigmon_clbs (
 	  stream3_pattern_enable = sigmon_enable_event;
 	end
       default: begin
-	stream3_pattern_enable = 1'b0;;
+	stream3_pattern_enable = 1'b0;
       end
     endcase
 
@@ -5815,7 +5815,7 @@ sigmon_logic_blocks sigmon_clbs (
 //	  stream3_pattern_disable = sigmon_enable_event;
 //	end
       default: begin
-	stream3_pattern_disable = 1'b0;;
+	stream3_pattern_disable = 1'b0;
       end
     endcase
   end // always @ begin

@@ -26,6 +26,7 @@
 #include "RunnableServerBase.hpp"
 #include "CmsUdpServer.hpp"
 #include "cms-ikernel.hpp"
+#include <uuid/uuid.h>
 
 #include <sstream>
 #include <future>

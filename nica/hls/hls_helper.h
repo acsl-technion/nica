@@ -248,7 +248,7 @@ void write_byte(ap_uint<Width>& vec, const int i, const unsigned char val) {
 template <unsigned Size, typename T>
 void memcpy(T *dest, const T *src) {
 #pragma HLS inline
-    for (int i = 0; i < Size; ++i) {
+    for (unsigned int i = 0; i < Size; ++i) {
 #pragma HLS unroll
          dest[i] = src[i];
     }
@@ -257,7 +257,7 @@ void memcpy(T *dest, const T *src) {
 template <unsigned Size, int Width, int Width2>
 void memcpy(ap_uint<Width>& dest, ap_uint<Width2>& src) {
 #pragma HLS inline
-    for (int i = 0; i < Size; ++i) {
+    for (unsigned int i = 0; i < Size; ++i) {
 #pragma HLS unroll
         write_byte<Width>(dest, i, get_byte<Width2>(src, i));
     }
@@ -266,7 +266,7 @@ void memcpy(ap_uint<Width>& dest, ap_uint<Width2>& src) {
 template <unsigned Size, int Width>
 void ap_uint_to_char(char *dst, ap_uint<Width>& src) {
 #pragma HLS inline
-    for (int i = 0; i < Size; ++i) {
+    for (unsigned int i = 0; i < Size; ++i) {
 #pragma HLS unroll
         dst[i] = get_byte<Width>(src, i);
     }
@@ -275,7 +275,7 @@ void ap_uint_to_char(char *dst, ap_uint<Width>& src) {
 template <unsigned Size, typename T>
 void memset(T *dest, T value) {
 #pragma HLS inline
-    for (int i = 0; i < Size; ++i) {
+    for (unsigned int i = 0; i < Size; ++i) {
 #pragma HLS unroll
         dest[i] = value;
     }

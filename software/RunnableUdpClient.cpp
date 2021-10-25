@@ -72,6 +72,7 @@ int main(int argc, char* argv[]) {
 	int payload_size = vm["payload-size"].as<int>();
 	int burst_size = vm["burst-size"].as<int>();
         int count = vm["count"].as<int>();
+        int range = vm["range"].as<int>();
         UdpClient client (local_ip);
         udp::endpoint endpoint = client.get_endpoint(hostname, port);
 
@@ -90,9 +91,9 @@ int main(int argc, char* argv[]) {
         }
 
         for (int i = 0; i < count; ++i) {
-            //uint32_t request = std::rand() % range;
+            uint32_t request = std::rand() % range;
             uint32_t* buf = (uint32_t*)malloc(payload_size);
-	    //request = htonl(request);
+            *buf = htonl(request);
             client.send_to(buf, payload_size, endpoint);
 	    free(buf);
         }
