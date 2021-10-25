@@ -2,5 +2,5 @@
 	path = ntl
 	url = https://github.com/acsl-technion/ntl
 [submodule "ansible/roles/mlnx-ofed"]
-	path = ansible/roles/mlnx-ofed
+	path = ansible/roles/haggaie.mlnx_ofed
 	url = https://github.com/haggaie/ansible-role-mlnx-ofed

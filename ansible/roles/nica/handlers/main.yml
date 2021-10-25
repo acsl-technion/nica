@@ -1,2 +1,4 @@
 ---
 # handlers file for nica
+- name: Restart mst
+  systemd: state=restarted enabled=yes name=mst

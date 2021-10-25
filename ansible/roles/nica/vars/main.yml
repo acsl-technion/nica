@@ -1,2 +1,4 @@
 ---
 # vars file for nica
+
+mlnx_ofed_downgrade_kernel: false

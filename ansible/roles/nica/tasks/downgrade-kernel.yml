@@ -1,0 +1,11 @@
+- name: Install old kernel ({{ mlnx_ofed_kernel_version }})
+  yum:
+    name: "http://vault.centos.org/{{ mlnx_ofed_centos_version }}/updates/x86_64/Packages/{{ item }}"
+  with_items:
+    - kernel-{{ mlnx_ofed_kernel_version }}.el7.x86_64.rpm
+    #- kernel-debug-{{ mlnx_ofed_kernel_version }}.el7.x86_64.rpm
+    #- kernel-debug-devel-{{ mlnx_ofed_kernel_version }}.el7.x86_64.rpm
+    - kernel-devel-{{ mlnx_ofed_kernel_version }}.el7.x86_64.rpm
+    - kernel-headers-{{ mlnx_ofed_kernel_version }}.el7.x86_64.rpm
+  become: yes
+
