@@ -1,2 +1,19 @@
 ---
 # defaults file for nica
+mlnx_ofed_versions:
+  3.3:
+    required_mlnx_ofed_version: 3.3-1.0.4.0.3
+    mlnx_ofed_distro: rhel7.2
+    kernel_version: 3.10.0-327.28.3
+    centos_version: 7.2.1511
+  4.0:
+    required_mlnx_ofed_version: 4.0-2.0.0.1.6
+    mlnx_ofed_distro: rhel7.3
+    kernel_version: 3.10.0-514.6.1
+    centos_version: 7.3.1611
+  4.5:
+    required_mlnx_ofed_version: 4.5-1.0.1.0
+    mlnx_ofed_distro: rhel7.3
+    kernel_version: 3.10.0-514.6.1
+    centos_version: 7.3.1611
+

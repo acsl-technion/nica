@@ -3,6 +3,13 @@
 - name: Include OS-specific variables
   include_vars: "{{ ansible_os_family }}.yml"
 
+- name: Downgrade kernel if needed
+  include: downgrade-kernel.yml
+  when: mlnx_ofed_downgrade_kernel and ansible_distribution == 'CentOS'
+
+- name: Install MLNX OFED
+  include_role: name=haggaie.mlnx_ofed
+
 - name: NICA rpm dependencies
   package:
     name:

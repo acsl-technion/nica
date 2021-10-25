@@ -1,2 +1,15 @@
 pip:
   executable: pip3.6
+
+nica_mlnx_ofed_version: 4.5
+
+mlnx_ofed_version: "{{mlnx_ofed_versions[nica_mlnx_ofed_version].required_mlnx_ofed_version}}"
+mlnx_ofed_distro: "{{mlnx_ofed_versions[nica_mlnx_ofed_version].mlnx_ofed_distro}}"
+required_mft_version: "{{mlnx_ofed_versions[nica_mlnx_ofed_version].required_mft_version}}"
+mlnx_ofed_kernel_version: "{{mlnx_ofed_versions[nica_mlnx_ofed_version].kernel_version}}"
+centos_version: "{{mlnx_ofed_versions[nica_mlnx_ofed_version].centos_version}}"
+
+mlnx_ofed_add_kernel_support: true
+mlnx_ofed_override_distro: true
+mlnx_ofed_override_kernel: true
+
